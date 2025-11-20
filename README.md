@@ -1,6 +1,6 @@
 # jupyterlab-ai-commands
 
-[![Github Actions Status](https://github.com/jtpio/jupyterlab-ai-commands/workflows/Build/badge.svg)](https://github.com/jtpio/jupyterlab-ai-commands/actions/workflows/build.yml)
+[![Github Actions Status](https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands/workflows/Build/badge.svg)](https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands/actions/workflows/build.yml)
 
 A set of commands for AI in JupyterLab
 

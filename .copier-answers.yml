@@ -2,13 +2,13 @@
 _commit: v4.4.0
 _src_path: https://github.com/jupyterlab/extension-template
 author_email: ''
-author_name: Jeremy Tuloup
+author_name: Project Jupyter
 has_binder: false
 has_settings: true
 kind: frontend
 labextension_name: jupyterlab-ai-commands
 project_short_description: A set of commands for AI in JupyterLab
 python_name: jupyterlab_ai_commands
-repository: https://github.com/jtpio/jupyterlab-ai-commands
+repository: https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands
 test: true
 

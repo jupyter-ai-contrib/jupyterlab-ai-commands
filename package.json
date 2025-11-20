@@ -7,12 +7,12 @@
         "jupyterlab",
         "jupyterlab-extension"
     ],
-    "homepage": "https://github.com/jtpio/jupyterlab-ai-commands",
+    "homepage": "https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands",
     "bugs": {
-        "url": "https://github.com/jtpio/jupyterlab-ai-commands/issues"
+        "url": "https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands/issues"
     },
     "license": "BSD-3-Clause",
-    "author": "Jeremy Tuloup",
+    "author": "Project Jupyter",
     "files": [
         "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
         "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
@@ -24,7 +24,7 @@
     "style": "style/index.css",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jtpio/jupyterlab-ai-commands.git"
+        "url": "https://github.com/jupyter-ai-contrib/jupyterlab-ai-commands.git"
     },
     "scripts": {
         "build": "jlpm build:lib && jlpm build:labextension:dev",
