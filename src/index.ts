@@ -29,7 +29,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
   ) => {
     console.log('JupyterLab extension jupyterlab-ai-commands is activated!');
 
-    const commands = app.commands;
+    const { commands, serviceManager } = app;
 
     registerFileCommands({
       commands,
@@ -42,7 +42,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       commands,
       docManager,
       kernelSpecManager,
-      notebookTracker
+      notebookTracker,
+      serviceManager
     });
 
     if (settingRegistry) {
