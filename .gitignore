@@ -123,3 +123,8 @@ dmypy.json
 
 # Yarn cache
 .yarn/
+
+# VSCode settings
+*.code-workspace
+.history/
+.vscode/

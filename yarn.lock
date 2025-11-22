@@ -1769,6 +1769,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/w3c-image-capture@npm:^1.0.11":
+  version: 1.0.11
+  resolution: "@types/w3c-image-capture@npm:1.0.11"
+  dependencies:
+    "@types/webrtc": "*"
+  checksum: 301fa282cf747aa74f22975515c55023f441bba1bcd545afaa49065ee6c09458d9deb4c68406a8dbbd8baace1b31aede502d1ea00f3d3b7cd607be5267f2110b
+  languageName: node
+  linkType: hard
+
 "@types/webpack-sources@npm:^0.1.5":
   version: 0.1.12
   resolution: "@types/webpack-sources@npm:0.1.12"
@@ -1777,6 +1786,13 @@ __metadata:
     "@types/source-list-map": "*"
     source-map: ^0.6.1
   checksum: 75342659a9889478969f7bb7360b998aa084ba11ab523c172ded6a807dac43ab2a9e1212078ef8bbf0f33e4fadd2c8a91b75d38184d8030d96a32fe819c9bb57
+  languageName: node
+  linkType: hard
+
+"@types/webrtc@npm:*":
+  version: 0.0.47
+  resolution: "@types/webrtc@npm:0.0.47"
+  checksum: b50f5fdc5d0df508aa3f2e7cdc1d53c4256e4f7fa7e01ccd1e59174fc1421e10e89a176a6b96eb401e45cdea5011a761af16170ce262621b8f98eb3f95d8c074
   languageName: node
   linkType: hard
 
@@ -4180,6 +4196,7 @@ __metadata:
     "@types/json-schema": ^7.0.11
     "@types/react": ^18.0.26
     "@types/react-addons-linked-state-mixin": ^0.14.22
+    "@types/w3c-image-capture": ^1.0.11
     "@typescript-eslint/eslint-plugin": ^6.1.0
     "@typescript-eslint/parser": ^6.1.0
     css-loader: ^6.7.1

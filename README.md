@@ -132,12 +132,20 @@ The `jlpm` command is JupyterLab's pinned version of
 `yarn` or `npm` in lieu of `jlpm` below.
 
 ```bash
-# Clone the repo to your local environment
+# Clone the repo to your local environment, eg
+gh repo clone jtpio/jupyterlab-ai-commands
+
 # Change directory to the jupyterlab_ai_commands directory
+cd jupyterlab-ai-commands
+
 # Install package in development mode
 pip install -e "."
+#   or
+uv pip install -e "."
+
 # Link your development version of the extension with JupyterLab
 jupyter labextension develop . --overwrite
+
 # Rebuild extension Typescript source after making changes
 jlpm build
 ```
@@ -147,6 +155,7 @@ You can watch the source directory and run JupyterLab at the same time in differ
 ```bash
 # Watch the source directory in one terminal, automatically rebuilding when needed
 jlpm watch
+
 # Run JupyterLab in another terminal
 jupyter lab
 ```

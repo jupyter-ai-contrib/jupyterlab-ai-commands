@@ -792,6 +792,73 @@ function registerSaveNotebookCommand(
 }
 
 /**
+ * Save a specific notebook to disk
+ */
+function registerScreenshotCommand(
+  commands: CommandRegistry,
+  docManager: IDocumentManager,
+  notebookTracker?: INotebookTracker
+): void {
+  const command = {
+    id: 'jupyterlab-ai-commands:screenshot-window',
+    label: 'Take window screenshot',
+    caption: 'Take a screenshot of the current browser window, return as base64 png',
+    describedBy: {
+      args: {
+        notebookPath: {
+          description:
+            'Path to the notebook file. If not provided, uses the currently active notebook'
+        }
+      }
+    },
+    execute: async (args: any) => {
+      const { notebookPath } = args;
+
+      const currentWidget = await getNotebookWidget(
+        notebookPath,
+        docManager,
+        notebookTracker
+      );
+      if (!currentWidget) {
+        return {
+          success: false,
+          error: notebookPath
+            ? `Failed to open notebook at path: ${notebookPath}`
+            : 'No active notebook and no notebook path provided'
+        };
+      }
+
+      const displayMediaOptions = {
+        video: true,
+        audio: false,
+      };
+      const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      const [track] = stream.getVideoTracks();
+      const imageCapture = new ImageCapture(track);
+      const frame = await imageCapture.grabFrame();
+      track.stop();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = frame.width;
+      canvas.height = frame.height;
+      const context = canvas.getContext('2d');
+      context?.drawImage(frame, 0, 0, frame.width, frame.height);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64Data = dataUrl.split(',')[1];
+
+      return {
+        success: true,
+        message: 'Notebook saved successfully',
+        windowScreenshot: base64Data,
+      };
+    }
+  };
+
+  commands.addCommand(command.id, command);
+}
+
+/**
  * Options for registering notebook commands
  */
 export interface IRegisterNotebookCommandsOptions {
@@ -829,4 +896,5 @@ export function registerNotebookCommands(
   registerRunCellCommand(commands, docManager, notebookTracker);
   registerDeleteCellCommand(commands, docManager, notebookTracker);
   registerSaveNotebookCommand(commands, docManager, notebookTracker);
+  registerScreenshotCommand(commands, docManager, notebookTracker);
 }
