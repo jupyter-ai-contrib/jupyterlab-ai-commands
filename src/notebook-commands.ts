@@ -403,8 +403,7 @@ function registerGetCellInfoCommand(
 function registerSetCellContentCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
-  notebookTracker?: INotebookTracker,
-  diffMode: 'unified' | 'split' = 'unified'
+  notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:set-cell-content',
@@ -430,6 +429,10 @@ function registerSetCellContentCommand(
         showDiff: {
           description:
             'Whether to show a diff view of the changes (default: true)'
+        },
+        diffMode: {
+          description:
+            'Display mode for the diff view: "unified" or "split" (default: "unified")'
         }
       }
     },
@@ -439,7 +442,8 @@ function registerSetCellContentCommand(
         cellId,
         cellIndex,
         content,
-        showDiff = true
+        showDiff = true,
+        diffMode = 'unified'
       } = args;
 
       const notebookWidget = await getNotebookWidget(
@@ -799,7 +803,6 @@ export interface IRegisterNotebookCommandsOptions {
   docManager: IDocumentManager;
   kernelSpecManager: KernelSpec.IManager;
   notebookTracker?: INotebookTracker;
-  diffMode?: 'unified' | 'split';
 }
 
 /**
@@ -808,24 +811,13 @@ export interface IRegisterNotebookCommandsOptions {
 export function registerNotebookCommands(
   options: IRegisterNotebookCommandsOptions
 ): void {
-  const {
-    commands,
-    docManager,
-    kernelSpecManager,
-    notebookTracker,
-    diffMode = 'unified'
-  } = options;
+  const { commands, docManager, kernelSpecManager, notebookTracker } = options;
 
   registerCreateNotebookCommand(commands, docManager, kernelSpecManager);
   registerAddCellCommand(commands, docManager, notebookTracker);
   registerGetNotebookInfoCommand(commands, docManager, notebookTracker);
   registerGetCellInfoCommand(commands, docManager, notebookTracker);
-  registerSetCellContentCommand(
-    commands,
-    docManager,
-    notebookTracker,
-    diffMode
-  );
+  registerSetCellContentCommand(commands, docManager, notebookTracker);
   registerRunCellCommand(commands, docManager, notebookTracker);
   registerDeleteCellCommand(commands, docManager, notebookTracker);
   registerSaveNotebookCommand(commands, docManager, notebookTracker);
