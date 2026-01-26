@@ -139,17 +139,11 @@ function registerExecuteInKernelCommand(
       } = args;
 
       if (!kernelId) {
-        return {
-          success: false,
-          error: 'kernelId is required'
-        };
+        throw new Error('kernelId is required');
       }
 
       if (!code) {
-        return {
-          success: false,
-          error: 'code is required'
-        };
+        throw new Error('code is required');
       }
 
       await kernelManager.ready;
@@ -163,10 +157,7 @@ function registerExecuteInKernelCommand(
       }
 
       if (!kernel) {
-        return {
-          success: false,
-          error: `No running kernel found with ID: ${kernelId}`
-        };
+        throw new Error(`No running kernel found with ID: ${kernelId}`);
       }
 
       const outputs: any[] = [];
@@ -276,29 +267,10 @@ function registerShutdownKernelCommand(
       const { kernelId } = args;
 
       if (!kernelId) {
-        return {
-          success: false,
-          error: 'kernelId is required'
-        };
+        throw new Error('kernelId is required');
       }
 
       await kernelManager.ready;
-
-      let kernelFound = false;
-      for (const runningKernel of kernelManager.running()) {
-        if (runningKernel.id === kernelId) {
-          kernelFound = true;
-          break;
-        }
-      }
-
-      if (!kernelFound) {
-        return {
-          success: false,
-          error: `No running kernel found with ID: ${kernelId}`
-        };
-      }
-
       await kernelManager.shutdown(kernelId);
 
       return {

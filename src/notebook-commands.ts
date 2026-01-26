@@ -182,22 +182,18 @@ function registerAddCellCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = currentWidget.content;
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       const shouldReplaceFirstCell =
@@ -268,22 +264,18 @@ function registerGetNotebookInfoCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = currentWidget.content;
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       const cellCount = model.cells.length;
@@ -341,22 +333,18 @@ function registerGetCellInfoCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = currentWidget.content;
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       if (cellIndex === undefined || cellIndex === null) {
@@ -364,10 +352,9 @@ function registerGetCellInfoCommand(
       }
 
       if (cellIndex < 0 || cellIndex >= model.cells.length) {
-        return {
-          success: false,
-          error: `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
-        };
+        throw new Error(
+          `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
+        );
       }
 
       const cell = model.cells.get(cellIndex);
@@ -452,12 +439,11 @@ function registerSetCellContentCommand(
         notebookTracker
       );
       if (!notebookWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = notebookWidget.content;
@@ -466,10 +452,7 @@ function registerSetCellContentCommand(
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       let targetCellIndex: number;
@@ -482,35 +465,25 @@ function registerSetCellContentCommand(
           }
         }
         if (targetCellIndex === -1) {
-          return {
-            success: false,
-            error: `Cell with ID '${cellId}' not found in notebook`
-          };
+          throw new Error(`Cell with ID '${cellId}' not found in notebook`);
         }
       } else if (cellIndex !== undefined && cellIndex !== null) {
         if (cellIndex < 0 || cellIndex >= model.cells.length) {
-          return {
-            success: false,
-            error: `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
-          };
+          throw new Error(
+            `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
+          );
         }
         targetCellIndex = cellIndex;
       } else {
         targetCellIndex = notebook.activeCellIndex;
         if (targetCellIndex === -1 || targetCellIndex >= model.cells.length) {
-          return {
-            success: false,
-            error: 'No active cell or invalid active cell index'
-          };
+          throw new Error('No active cell or invalid active cell index');
         }
       }
 
       const targetCell = model.cells.get(targetCellIndex);
       if (!targetCell) {
-        return {
-          success: false,
-          error: `Cell at index ${targetCellIndex} not found`
-        };
+        throw new Error(`Cell at index ${targetCellIndex} not found`);
       }
 
       const sharedModel = targetCell.sharedModel;
@@ -595,68 +568,52 @@ function registerRunCellCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = currentWidget.content;
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       if (cellIndex < 0 || cellIndex >= model.cells.length) {
-        return {
-          success: false,
-          error: `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
-        };
+        throw new Error(
+          `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
+        );
       }
 
       const cellWidget = notebook.widgets[cellIndex];
       if (!cellWidget) {
-        return {
-          success: false,
-          error: `Cell widget at index ${cellIndex} not found`
-        };
+        throw new Error(`Cell widget at index ${cellIndex} not found`);
       }
 
-      try {
-        if (cellWidget instanceof CodeCell) {
-          const sessionCtx = currentWidget.sessionContext;
-          await CodeCell.execute(cellWidget, sessionCtx, {
-            recordTiming,
-            deletedCells: model.deletedCells
-          });
+      if (cellWidget instanceof CodeCell) {
+        const sessionCtx = currentWidget.sessionContext;
+        await CodeCell.execute(cellWidget, sessionCtx, {
+          recordTiming,
+          deletedCells: model.deletedCells
+        });
 
-          const codeModel = cellWidget.model as ICodeCellModel;
-          return {
-            success: true,
-            message: `Cell ${cellIndex} executed successfully`,
-            cellIndex,
-            executionCount: codeModel.executionCount,
-            hasOutput: codeModel.outputs.length > 0
-          };
-        } else {
-          return {
-            success: true,
-            message: `Cell ${cellIndex} is not a code cell, no execution needed`,
-            cellIndex,
-            cellType: cellWidget.model.type
-          };
-        }
-      } catch (error) {
+        const codeModel = cellWidget.model as ICodeCellModel;
         return {
-          success: false,
-          error: `Failed to execute cell: ${(error as Error).message}`,
-          cellIndex
+          success: true,
+          message: `Cell ${cellIndex} executed successfully`,
+          cellIndex,
+          executionCount: codeModel.executionCount,
+          hasOutput: codeModel.outputs.length > 0
+        };
+      } else {
+        return {
+          success: true,
+          message: `Cell ${cellIndex} is not a code cell, no execution needed`,
+          cellIndex,
+          cellType: cellWidget.model.type
         };
       }
     }
@@ -697,37 +654,29 @@ function registerDeleteCellCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       const notebook = currentWidget.content;
       const model = notebook.model;
 
       if (!model) {
-        return {
-          success: false,
-          error: 'No notebook model available'
-        };
+        throw new Error('No notebook model available');
       }
 
       if (cellIndex < 0 || cellIndex >= model.cells.length) {
-        return {
-          success: false,
-          error: `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
-        };
+        throw new Error(
+          `Invalid cell index: ${cellIndex}. Notebook has ${model.cells.length} cells.`
+        );
       }
 
       const targetCell = model.cells.get(cellIndex);
       if (!targetCell) {
-        return {
-          success: false,
-          error: `Cell at index ${cellIndex} not found`
-        };
+        throw new Error(`Cell at index ${cellIndex} not found`);
       }
 
       model.sharedModel.deleteCell(cellIndex);
@@ -773,12 +722,11 @@ function registerSaveNotebookCommand(
         notebookTracker
       );
       if (!currentWidget) {
-        return {
-          success: false,
-          error: notebookPath
+        throw new Error(
+          notebookPath
             ? `Failed to open notebook at path: ${notebookPath}`
             : 'No active notebook and no notebook path provided'
-        };
+        );
       }
 
       await currentWidget.context.save();
