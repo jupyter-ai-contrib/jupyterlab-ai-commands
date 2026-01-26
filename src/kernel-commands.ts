@@ -85,7 +85,7 @@ function registerStartKernelCommand(
 
       return {
         success: true,
-        message: `Kernel started successfully`,
+        message: 'Kernel started successfully',
         kernelId: kernel.id,
         kernelName: kernel.name,
         status: kernel.status
