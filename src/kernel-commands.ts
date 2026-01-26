@@ -1,4 +1,4 @@
-import { Kernel, KernelManager, KernelSpec } from '@jupyterlab/services';
+import { Kernel, KernelSpec } from '@jupyterlab/services';
 import { CommandRegistry } from '@lumino/commands';
 
 /**
@@ -42,7 +42,7 @@ async function findKernelByLanguage(
  */
 function registerStartKernelCommand(
   commands: CommandRegistry,
-  kernelManager: KernelManager,
+  kernelManager: Kernel.IManager,
   kernelSpecManager: KernelSpec.IManager
 ): void {
   const command = {
@@ -101,7 +101,7 @@ function registerStartKernelCommand(
  */
 function registerExecuteInKernelCommand(
   commands: CommandRegistry,
-  kernelManager: KernelManager
+  kernelManager: Kernel.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:execute-in-kernel',
@@ -259,7 +259,7 @@ function registerExecuteInKernelCommand(
  */
 function registerShutdownKernelCommand(
   commands: CommandRegistry,
-  kernelManager: KernelManager
+  kernelManager: Kernel.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:shutdown-kernel',
@@ -317,7 +317,7 @@ function registerShutdownKernelCommand(
  */
 function registerListKernelsCommand(
   commands: CommandRegistry,
-  kernelManager: KernelManager
+  kernelManager: Kernel.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:list-kernels',
@@ -357,7 +357,7 @@ function registerListKernelsCommand(
  */
 export interface IRegisterKernelCommandsOptions {
   commands: CommandRegistry;
-  kernelManager: KernelManager;
+  kernelManager: Kernel.IManager;
   kernelSpecManager: KernelSpec.IManager;
 }
 
