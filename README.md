@@ -128,6 +128,8 @@ This extension provides the following commands for AI-assisted interactions with
     - `language` (string, optional): The programming language for the kernel (e.g., python, r, julia). If not provided, uses system default
     - `kernelName` (string, optional): The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language
   - Returns:
+    - `success` (boolean): Whether the kernel was started successfully
+    - `message` (string): Status message
     - `kernelId` (string): The unique ID of the started kernel
     - `kernelName` (string): The name of the kernel
     - `status` (string): The current status of the kernel
@@ -153,11 +155,13 @@ This extension provides the following commands for AI-assisted interactions with
     - `kernelId` (string): The ID of the kernel to shutdown
   - Returns:
     - `success` (boolean): Whether the kernel was successfully shut down
+    - `message` (string): Status message
     - `kernelId` (string): The ID of the shut down kernel
 
 - **`jupyterlab-ai-commands:list-kernels`** - List all running kernels
   - Arguments: None
   - Returns:
+    - `success` (boolean): Whether the operation completed successfully
     - `kernels` (array): Array of kernel objects with the following properties:
       - `id` (string): The unique kernel ID
       - `name` (string): The kernel name
