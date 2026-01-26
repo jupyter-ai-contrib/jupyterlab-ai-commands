@@ -121,6 +121,51 @@ This extension provides the following commands for AI-assisted interactions with
   - Arguments:
     - `notebookPath` (string, optional): Path to the notebook file. If not provided, uses the currently active notebook
 
+### Kernel Commands
+
+- **`jupyterlab-ai-commands:start-kernel`** - Start a new kernel with the specified language or kernel name
+  - Arguments:
+    - `language` (string, optional): The programming language for the kernel (e.g., python, r, julia). If not provided, uses system default
+    - `kernelName` (string, optional): The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language
+  - Returns:
+    - `kernelId` (string): The unique ID of the started kernel
+    - `kernelName` (string): The name of the kernel
+    - `status` (string): The current status of the kernel
+
+- **`jupyterlab-ai-commands:execute-in-kernel`** - Execute code in a running kernel and return the outputs
+  - Arguments:
+    - `kernelId` (string): The ID of the kernel to execute code in
+    - `code` (string): The code to execute
+    - `silent` (boolean, optional): If true, signals the kernel to execute quietly without broadcasting output (default: false)
+    - `storeHistory` (boolean, optional): If true, the code will be stored in the kernel execution history (default: true)
+    - `stopOnError` (boolean, optional): If true, abort the execution queue on an error (default: false)
+  - Returns:
+    - `success` (boolean): Whether the execution completed successfully
+    - `status` (string): Execution status ("ok", "error", or "abort")
+    - `executionCount` (number): The execution count
+    - `outputs` (array): Array of output objects (stream, display_data, execute_result, error)
+    - `errorName` (string, optional): Error name if status is "error"
+    - `errorValue` (string, optional): Error value if status is "error"
+    - `traceback` (array, optional): Error traceback if status is "error"
+
+- **`jupyterlab-ai-commands:shutdown-kernel`** - Shutdown a running kernel by ID
+  - Arguments:
+    - `kernelId` (string): The ID of the kernel to shutdown
+  - Returns:
+    - `success` (boolean): Whether the kernel was successfully shut down
+    - `kernelId` (string): The ID of the shut down kernel
+
+- **`jupyterlab-ai-commands:list-kernels`** - List all running kernels
+  - Arguments: None
+  - Returns:
+    - `kernels` (array): Array of kernel objects with the following properties:
+      - `id` (string): The unique kernel ID
+      - `name` (string): The kernel name
+      - `execution_state` (string): Current execution state
+      - `last_activity` (string): Timestamp of last activity
+      - `connections` (number): Number of active connections
+    - `count` (number): Total number of running kernels
+
 ## Contributing
 
 ### Development install
