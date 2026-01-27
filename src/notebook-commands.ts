@@ -83,14 +83,19 @@ function registerCreateNotebookCommand(
       'Create a new Jupyter notebook with a kernel for the specified language',
     describedBy: {
       args: {
-        language: {
-          description:
-            'The programming language for the notebook (e.g., python, r, julia, javascript, etc.). Will use system default if not specified.'
+        type: 'object',
+        properties: {
+          language: {
+            type: 'string',
+            description:
+              'The programming language for the notebook (e.g., python, r, julia, javascript, etc.). Will use system default if not specified.'
+          },
+          name: {
+            type: 'string',
+            description: 'Name for the notebook file (without .ipynb extension)'
+          }
         },
-        name: {
-          description:
-            'Optional name for the notebook file (without .ipynb extension)'
-        }
+        required: ['name']
       }
     },
     execute: async (args: any) => {
@@ -153,18 +158,25 @@ function registerAddCellCommand(
     caption: 'Add a cell to the current notebook with optional content',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
-        },
-        content: {
-          description: 'Content to add to the cell'
-        },
-        cellType: {
-          description: 'Type of cell to add (code, markdown, raw)'
-        },
-        position: {
-          description: 'Position relative to current cell (above or below)'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          content: {
+            type: 'string',
+            description: 'Content to add to the cell'
+          },
+          cellType: {
+            type: 'string',
+            description: 'Type of cell to add (code, markdown, raw)'
+          },
+          position: {
+            type: 'string',
+            description: 'Position relative to current cell (above or below)'
+          }
         }
       }
     },
@@ -249,9 +261,13 @@ function registerGetNotebookInfoCommand(
       'Get information about a notebook including number of cells and active cell index',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          }
         }
       }
     },
@@ -282,6 +298,7 @@ function registerGetNotebookInfoCommand(
       const activeCellIndex = notebook.activeCellIndex;
       const activeCell = notebook.activeCell;
       const activeCellType = activeCell?.model.type || 'unknown';
+      const notebookMetadata = model.metadata;
 
       return {
         success: true,
@@ -290,6 +307,7 @@ function registerGetNotebookInfoCommand(
         cellCount,
         activeCellIndex,
         activeCellType,
+        notebookMetadata,
         isDirty: model.dirty
       };
     }
@@ -313,13 +331,18 @@ function registerGetCellInfoCommand(
       'Get information about a specific cell including its type, source content, and outputs',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
-        },
-        cellIndex: {
-          description:
-            'Index of the cell to get information for (0-based). If not provided, uses the currently active cell'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          cellIndex: {
+            type: 'number',
+            description:
+              'Index of the cell to get information for (0-based). If not provided, uses the currently active cell'
+          }
         }
       }
     },
@@ -398,29 +421,39 @@ function registerSetCellContentCommand(
     caption: 'Set the content of a specific cell',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          cellId: {
+            type: 'string',
+            description:
+              'ID of the cell to modify. If provided, takes precedence over cellIndex'
+          },
+          cellIndex: {
+            type: 'number',
+            description:
+              'Index of the cell to modify (0-based). Used if cellId is not provided. If neither is provided, targets the active cell'
+          },
+          content: {
+            type: 'string',
+            description: 'New content for the cell'
+          },
+          showDiff: {
+            type: 'boolean',
+            description:
+              'Whether to show a diff view of the changes (default: true)'
+          },
+          diffMode: {
+            type: 'string',
+            description:
+              'Display mode for the diff view: "unified" or "split" (default: "unified")'
+          }
         },
-        cellId: {
-          description:
-            'ID of the cell to modify. If provided, takes precedence over cellIndex'
-        },
-        cellIndex: {
-          description:
-            'Index of the cell to modify (0-based). Used if cellId is not provided. If neither is provided, targets the active cell'
-        },
-        content: {
-          description: 'New content for the cell'
-        },
-        showDiff: {
-          description:
-            'Whether to show a diff view of the changes (default: true)'
-        },
-        diffMode: {
-          description:
-            'Display mode for the diff view: "unified" or "split" (default: "unified")'
-        }
+        required: ['content']
       }
     },
     execute: async (args: any) => {
@@ -547,16 +580,23 @@ function registerRunCellCommand(
     caption: 'Run a specific cell in the notebook by index',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          cellIndex: {
+            type: 'number',
+            description: 'Index of the cell to run (0-based)'
+          },
+          recordTiming: {
+            type: 'boolean',
+            description: 'Whether to record execution timing'
+          }
         },
-        cellIndex: {
-          description: 'Index of the cell to run (0-based)'
-        },
-        recordTiming: {
-          description: 'Whether to record execution timing'
-        }
+        required: ['cellIndex']
       }
     },
     execute: async (args: any) => {
@@ -636,13 +676,19 @@ function registerDeleteCellCommand(
     caption: 'Delete a specific cell from the notebook by index',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          cellIndex: {
+            type: 'number',
+            description: 'Index of the cell to delete (0-based)'
+          }
         },
-        cellIndex: {
-          description: 'Index of the cell to delete (0-based)'
-        }
+        required: ['cellIndex']
       }
     },
     execute: async (args: any) => {
@@ -707,9 +753,13 @@ function registerSaveNotebookCommand(
     caption: 'Save a specific notebook to disk',
     describedBy: {
       args: {
-        notebookPath: {
-          description:
-            'Path to the notebook file. If not provided, uses the currently active notebook'
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          }
         }
       }
     },

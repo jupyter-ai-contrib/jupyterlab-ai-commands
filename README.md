@@ -57,11 +57,11 @@ This extension provides the following commands for AI-assisted interactions with
 
 - **`jupyterlab-ai-commands:navigate-to-directory`** - Navigate to a specific directory in the file browser
   - Arguments:
-    - `directoryPath` (string): Path to the directory to navigate to
+    - `path` (string): Path to the directory to navigate to
 
 - **`jupyterlab-ai-commands:list-directory`** - List files and directories in a specific directory
   - Arguments:
-    - `directoryPath` (string, optional): Path to the directory to list. If not provided, lists the root directory
+    - `path` (string, optional): Path to the directory to list. If not provided, lists the root directory
     - `includeHidden` (boolean, optional): Whether to include hidden files (default: false)
 
 - **`jupyterlab-ai-commands:get-file-info`** - Get information about a file including its path, name, extension, and content
@@ -105,6 +105,7 @@ This extension provides the following commands for AI-assisted interactions with
     - `cellIndex` (number, optional): Index of the cell to modify (0-based). Used if cellId is not provided. If neither is provided, targets the active cell
     - `content` (string): New content for the cell
     - `showDiff` (boolean, optional): Whether to show a diff view of the changes (default: true)
+    - `diffMode` (string, optional): Display mode for the diff view - "unified" or "split" (default: "unified")
 
 - **`jupyterlab-ai-commands:run-cell`** - Run a specific cell in the notebook by index
   - Arguments:

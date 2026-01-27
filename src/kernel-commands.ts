@@ -78,13 +78,18 @@ function registerStartKernelCommand(
     caption: 'Start a new kernel with the specified language or kernel name',
     describedBy: {
       args: {
-        language: {
-          description:
-            'The programming language for the kernel (e.g., python, r, julia). If not provided, uses system default.'
-        },
-        kernelName: {
-          description:
-            'The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language.'
+        type: 'object',
+        properties: {
+          language: {
+            type: 'string',
+            description:
+              'The programming language for the kernel (e.g., python, r, julia). If not provided, uses system default.'
+          },
+          kernelName: {
+            type: 'string',
+            description:
+              'The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language.'
+          }
         }
       }
     },
@@ -138,24 +143,33 @@ function registerExecuteInKernelCommand(
     caption: 'Execute code in a running kernel and return the outputs',
     describedBy: {
       args: {
-        kernelId: {
-          description: 'The ID of the kernel to execute code in'
+        type: 'object',
+        properties: {
+          kernelId: {
+            type: 'string',
+            description: 'The ID of the kernel to execute code in'
+          },
+          code: {
+            type: 'string',
+            description: 'The code to execute'
+          },
+          silent: {
+            type: 'boolean',
+            description:
+              'If true, signals the kernel to execute the code quietly without broadcasting output (default: false)'
+          },
+          storeHistory: {
+            type: 'boolean',
+            description:
+              'If true, the code will be stored in the kernel execution history (default: true)'
+          },
+          stopOnError: {
+            type: 'boolean',
+            description:
+              'If true, abort the execution queue on an error (default: false)'
+          }
         },
-        code: {
-          description: 'The code to execute'
-        },
-        silent: {
-          description:
-            'If true, signals the kernel to execute the code quietly without broadcasting output (default: false)'
-        },
-        storeHistory: {
-          description:
-            'If true, the code will be stored in the kernel execution history (default: true)'
-        },
-        stopOnError: {
-          description:
-            'If true, abort the execution queue on an error (default: false)'
-        }
+        required: ['kernelId', 'code']
       }
     },
     execute: async (args: ReadonlyPartialJSONObject) => {
@@ -303,9 +317,14 @@ function registerShutdownKernelCommand(
     caption: 'Shutdown a running kernel by ID',
     describedBy: {
       args: {
-        kernelId: {
-          description: 'The ID of the kernel to shutdown'
-        }
+        type: 'object',
+        properties: {
+          kernelId: {
+            type: 'string',
+            description: 'The ID of the kernel to shutdown'
+          }
+        },
+        required: ['kernelId']
       }
     },
     execute: async (args: ReadonlyPartialJSONObject) => {
@@ -341,7 +360,10 @@ function registerListKernelsCommand(
     label: 'List Kernels',
     caption: 'List all running kernels',
     describedBy: {
-      args: {}
+      args: {
+        type: 'object',
+        properties: {}
+      }
     },
     execute: async () => {
       await kernelManager.ready;

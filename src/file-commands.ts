@@ -22,19 +22,27 @@ function registerCreateFileCommand(
     caption: 'Create a new file of specified type',
     describedBy: {
       args: {
-        fileName: {
-          description: 'Name of the file to create'
+        type: 'object',
+        properties: {
+          fileName: {
+            type: 'string',
+            description: 'Name of the file to create'
+          },
+          fileType: {
+            type: 'string',
+            description:
+              'Type of file to create. Common examples: text, python, markdown, json, javascript, typescript, yaml, julia, r, csv'
+          },
+          content: {
+            type: 'string',
+            description: 'Initial content for the file (optional)'
+          },
+          cwd: {
+            type: 'string',
+            description: 'Directory where to create the file (optional)'
+          }
         },
-        fileType: {
-          description:
-            'Type of file to create. Common examples: text, python, markdown, json, javascript, typescript, yaml, julia, r, csv'
-        },
-        content: {
-          description: 'Initial content for the file (optional)'
-        },
-        cwd: {
-          description: 'Directory where to create the file (optional)'
-        }
+        required: ['fileName']
       }
     },
     execute: async (args: any) => {
@@ -105,9 +113,14 @@ function registerOpenFileCommand(
     caption: 'Open a file in the editor',
     describedBy: {
       args: {
-        filePath: {
-          description: 'Path to the file to open'
-        }
+        type: 'object',
+        properties: {
+          filePath: {
+            type: 'string',
+            description: 'Path to the file to open'
+          }
+        },
+        required: ['filePath']
       }
     },
     execute: async (args: any) => {
@@ -144,9 +157,14 @@ function registerDeleteFileCommand(
     caption: 'Delete a file from the file system',
     describedBy: {
       args: {
-        filePath: {
-          description: 'Path to the file to delete'
-        }
+        type: 'object',
+        properties: {
+          filePath: {
+            type: 'string',
+            description: 'Path to the file to delete'
+          }
+        },
+        required: ['filePath']
       }
     },
     execute: async (args: any) => {
@@ -178,12 +196,18 @@ function registerRenameFileCommand(
     caption: 'Rename a file or move it to a different location',
     describedBy: {
       args: {
-        oldPath: {
-          description: 'Current path of the file'
+        type: 'object',
+        properties: {
+          oldPath: {
+            type: 'string',
+            description: 'Current path of the file'
+          },
+          newPath: {
+            type: 'string',
+            description: 'New path/name for the file'
+          }
         },
-        newPath: {
-          description: 'New path/name for the file'
-        }
+        required: ['oldPath', 'newPath']
       }
     },
     execute: async (args: any) => {
@@ -216,12 +240,18 @@ function registerCopyFileCommand(
     caption: 'Copy a file to a new location',
     describedBy: {
       args: {
-        sourcePath: {
-          description: 'Path of the file to copy'
+        type: 'object',
+        properties: {
+          sourcePath: {
+            type: 'string',
+            description: 'Path of the file to copy'
+          },
+          destinationPath: {
+            type: 'string',
+            description: 'Destination path for the copied file'
+          }
         },
-        destinationPath: {
-          description: 'Destination path for the copied file'
-        }
+        required: ['sourcePath', 'destinationPath']
       }
     },
     execute: async (args: any) => {
@@ -251,9 +281,14 @@ function registerNavigateToDirectoryCommand(commands: CommandRegistry): void {
     caption: 'Navigate to a specific directory in the file browser',
     describedBy: {
       args: {
-        path: {
-          description: 'Path to the directory to navigate to'
-        }
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Path to the directory to navigate to'
+          }
+        },
+        required: ['path']
       }
     },
     execute: async (args: any) => {
@@ -287,12 +322,17 @@ function registerListDirectoryCommand(
     caption: 'List files and directories in a specific directory',
     describedBy: {
       args: {
-        path: {
-          description:
-            'Path to the directory to list. If not provided, lists the root directory'
-        },
-        includeHidden: {
-          description: 'Whether to include hidden files (default: false)'
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description:
+              'Path to the directory to list. If not provided, lists the root directory'
+          },
+          includeHidden: {
+            type: 'boolean',
+            description: 'Whether to include hidden files (default: false)'
+          }
         }
       }
     },
@@ -360,9 +400,13 @@ function registerGetFileInfoCommand(
     caption: 'Get information about a file including its content',
     describedBy: {
       args: {
-        filePath: {
-          description:
-            'Path to the file to read. If not provided, uses the currently active file in the editor.'
+        type: 'object',
+        properties: {
+          filePath: {
+            type: 'string',
+            description:
+              'Path to the file to read. If not provided, uses the currently active file in the editor.'
+          }
         }
       }
     },
@@ -437,19 +481,28 @@ function registerSetFileContentCommand(
     caption: 'Set or update the content of an existing file',
     describedBy: {
       args: {
-        filePath: {
-          description: 'Path to the file to update'
+        type: 'object',
+        properties: {
+          filePath: {
+            type: 'string',
+            description: 'Path to the file to update'
+          },
+          content: {
+            type: 'string',
+            description: 'The new content to set for the file'
+          },
+          save: {
+            type: 'boolean',
+            description:
+              'Whether to save the file after updating (default: true)'
+          },
+          showDiff: {
+            type: 'boolean',
+            description:
+              'Whether to show a diff view of the changes (default: true)'
+          }
         },
-        content: {
-          description: 'The new content to set for the file'
-        },
-        save: {
-          description: 'Whether to save the file after updating (default: true)'
-        },
-        showDiff: {
-          description:
-            'Whether to show a diff view of the changes (default: true)'
-        }
+        required: ['filePath', 'content']
       }
     },
     execute: async (args: any) => {
