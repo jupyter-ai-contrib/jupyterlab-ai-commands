@@ -170,6 +170,17 @@ This extension provides the following commands for AI-assisted interactions with
       - `connections` (number): Number of active connections
     - `count` (number): Total number of running kernels
 
+- **`jupyterlab-ai-commands:list-kernelspecs`** - List all available kernel specs
+  - Arguments: None
+  - Returns:
+    - `success` (boolean): Whether the operation completed successfully
+    - `kernelspecs` (array): Array of kernel spec objects with the following properties:
+      - `name` (string): The kernel spec name (e.g., python3, ir, julia-1.10)
+      - `display_name` (string): Human-readable display name
+      - `language` (string): The programming language of the kernel
+    - `count` (number): Total number of available kernel specs
+    - `default` (string): The default kernel spec name
+
 ## Contributing
 
 ### Development install
