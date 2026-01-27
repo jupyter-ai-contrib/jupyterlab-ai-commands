@@ -1,23 +1,37 @@
 import { Kernel, KernelMessage, KernelSpec } from '@jupyterlab/services';
 import * as nbformat from '@jupyterlab/nbformat';
 import { CommandRegistry } from '@lumino/commands';
-import { ReadonlyPartialJSONObject } from '@lumino/coreutils';
 
+/**
+ * Information about a running kernel
+ */
 type KernelListItem = Pick<
   Kernel.IModel,
   'id' | 'name' | 'execution_state' | 'last_activity' | 'connections'
 >;
 
+/**
+ * Information about a kernel spec
+ */
 interface IKernelSpecInfo {
   name: string;
   display_name: KernelSpec.ISpecModel['display_name'];
   language: KernelSpec.ISpecModel['language'];
 }
 
+/**
+ * Kernel execution status
+ */
 type KernelExecutionStatus = 'ok' | 'error' | 'abort';
 
+/**
+ * Kernel execution output format (nbformat)
+ */
 type KernelExecutionOutput = nbformat.IOutput;
 
+/**
+ * Result of kernel code execution
+ */
 interface IKernelExecutionResult {
   success: boolean;
   status: KernelExecutionStatus;
@@ -93,10 +107,8 @@ function registerStartKernelCommand(
         }
       }
     },
-    execute: async (args: ReadonlyPartialJSONObject) => {
-      const language = typeof args.language === 'string' ? args.language : null;
-      const kernelName =
-        typeof args.kernelName === 'string' ? args.kernelName : null;
+    execute: async (args: any) => {
+      const { language = null, kernelName = null } = args;
 
       let targetKernelName: string;
 
@@ -172,14 +184,14 @@ function registerExecuteInKernelCommand(
         required: ['kernelId', 'code']
       }
     },
-    execute: async (args: ReadonlyPartialJSONObject) => {
-      const kernelId = typeof args.kernelId === 'string' ? args.kernelId : '';
-      const code = typeof args.code === 'string' ? args.code : '';
-      const silent = typeof args.silent === 'boolean' ? args.silent : false;
-      const storeHistory =
-        typeof args.storeHistory === 'boolean' ? args.storeHistory : true;
-      const stopOnError =
-        typeof args.stopOnError === 'boolean' ? args.stopOnError : false;
+    execute: async (args: any) => {
+      const {
+        kernelId,
+        code,
+        silent = false,
+        storeHistory = true,
+        stopOnError = false
+      } = args;
 
       if (!kernelId) {
         throw new Error('kernelId is required');
@@ -327,8 +339,8 @@ function registerShutdownKernelCommand(
         required: ['kernelId']
       }
     },
-    execute: async (args: ReadonlyPartialJSONObject) => {
-      const kernelId = typeof args.kernelId === 'string' ? args.kernelId : '';
+    execute: async (args: any) => {
+      const { kernelId } = args;
 
       if (!kernelId) {
         throw new Error('kernelId is required');
