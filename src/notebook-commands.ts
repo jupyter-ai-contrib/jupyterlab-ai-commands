@@ -282,6 +282,7 @@ function registerGetNotebookInfoCommand(
       const activeCellIndex = notebook.activeCellIndex;
       const activeCell = notebook.activeCell;
       const activeCellType = activeCell?.model.type || 'unknown';
+      const notebookMetadata = model.metadata;
 
       return {
         success: true,
@@ -290,6 +291,7 @@ function registerGetNotebookInfoCommand(
         cellCount,
         activeCellIndex,
         activeCellType,
+        notebookMetadata,
         isDirty: model.dirty
       };
     }
