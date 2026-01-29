@@ -1,6 +1,5 @@
 import { CodeCell, ICodeCellModel, MarkdownCell } from '@jupyterlab/cells';
 import { IDocumentManager } from '@jupyterlab/docmanager';
-import { DocumentWidget } from '@jupyterlab/docregistry';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { KernelSpec } from '@jupyterlab/services';
 import { CommandRegistry } from '@lumino/commands';
@@ -47,15 +46,18 @@ async function findKernelByLanguage(
 /**
  * Helper function to get a notebook widget by path or use the active one
  */
-async function getNotebookWidget(
+function getNotebookWidget(
   notebookPath: string | null | undefined,
   docManager: IDocumentManager,
-  notebookTracker?: INotebookTracker
-): Promise<NotebookPanel | null> {
+  notebookTracker?: INotebookTracker,
+  background?: boolean
+): NotebookPanel | null {
   if (notebookPath) {
     let widget = docManager.findWidget(notebookPath);
     if (!widget) {
-      widget = docManager.openOrReveal(notebookPath);
+      widget = docManager.openOrReveal(notebookPath, 'default', undefined, {
+        activate: !(background ?? true)
+      });
     }
 
     if (!(widget instanceof NotebookPanel)) {
@@ -93,13 +95,18 @@ function registerCreateNotebookCommand(
           name: {
             type: 'string',
             description: 'Name for the notebook file (without .ipynb extension)'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         },
         required: ['name']
       }
     },
     execute: async (args: any) => {
-      const { language = null, name } = args;
+      const { name, background, language = null } = args;
 
       const kernel = await findKernelByLanguage(kernelSpecManager, language);
 
@@ -117,18 +124,21 @@ function registerCreateNotebookCommand(
       await docManager.services.contents.rename(notebookModel.path, fileName);
 
       // Create widget with specific kernel
-      const notebook = docManager.createNew(fileName, 'default', {
-        name: kernel
-      });
+      const notebook = docManager.openOrReveal(
+        fileName,
+        'default',
+        { name: kernel },
+        {
+          activate: !(background ?? true)
+        }
+      );
 
-      if (!(notebook instanceof DocumentWidget)) {
+      if (!(notebook instanceof NotebookPanel)) {
         throw new Error('Failed to create notebook widget');
       }
 
       await notebook.context.ready;
       await notebook.context.save();
-
-      docManager.openOrReveal(fileName);
 
       return {
         success: true,
@@ -176,6 +186,11 @@ function registerAddCellCommand(
           position: {
             type: 'string',
             description: 'Position relative to current cell (above or below)'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         }
       }
@@ -183,15 +198,17 @@ function registerAddCellCommand(
     execute: async (args: any) => {
       const {
         notebookPath,
+        background,
         content = null,
         cellType = 'code',
         position = 'below'
       } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(
@@ -267,17 +284,23 @@ function registerGetNotebookInfoCommand(
             type: 'string',
             description:
               'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         }
       }
     },
-    execute: async (args: any) => {
-      const { notebookPath } = args;
+    execute: (args: any) => {
+      const { notebookPath, background } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(
@@ -342,18 +365,24 @@ function registerGetCellInfoCommand(
             type: 'number',
             description:
               'Index of the cell to get information for (0-based). If not provided, uses the currently active cell'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         }
       }
     },
-    execute: async (args: any) => {
-      const { notebookPath } = args;
+    execute: (args: any) => {
+      const { notebookPath, background } = args;
       let { cellIndex } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(
@@ -451,25 +480,32 @@ function registerSetCellContentCommand(
             type: 'string',
             description:
               'Display mode for the diff view: "unified" or "split" (default: "unified")'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         },
         required: ['content']
       }
     },
-    execute: async (args: any) => {
+    execute: (args: any) => {
       const {
         notebookPath,
         cellId,
         cellIndex,
         content,
+        background,
         showDiff = true,
         diffMode = 'unified'
       } = args;
 
-      const notebookWidget = await getNotebookWidget(
+      const notebookWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!notebookWidget) {
         throw new Error(
@@ -594,18 +630,24 @@ function registerRunCellCommand(
           recordTiming: {
             type: 'boolean',
             description: 'Whether to record execution timing'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         },
         required: ['cellIndex']
       }
     },
     execute: async (args: any) => {
-      const { notebookPath, cellIndex, recordTiming = true } = args;
+      const { notebookPath, cellIndex, background, recordTiming = true } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(
@@ -686,18 +728,24 @@ function registerDeleteCellCommand(
           cellIndex: {
             type: 'number',
             description: 'Index of the cell to delete (0-based)'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         },
         required: ['cellIndex']
       }
     },
-    execute: async (args: any) => {
-      const { notebookPath, cellIndex } = args;
+    execute: (args: any) => {
+      const { notebookPath, cellIndex, background } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(
@@ -759,17 +807,23 @@ function registerSaveNotebookCommand(
             type: 'string',
             description:
               'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
           }
         }
       }
     },
     execute: async (args: any) => {
-      const { notebookPath } = args;
+      const { notebookPath, background } = args;
 
-      const currentWidget = await getNotebookWidget(
+      const currentWidget = getNotebookWidget(
         notebookPath,
         docManager,
-        notebookTracker
+        notebookTracker,
+        background
       );
       if (!currentWidget) {
         throw new Error(

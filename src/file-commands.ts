@@ -1,13 +1,35 @@
 import { PathExt } from '@jupyterlab/coreutils';
 import { CommandRegistry } from '@lumino/commands';
 import { IDocumentManager } from '@jupyterlab/docmanager';
-import { IDocumentWidget } from '@jupyterlab/docregistry';
+import { DocumentWidget, IDocumentWidget } from '@jupyterlab/docregistry';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
 
 /**
  * Command IDs for diff management (from jupyterlab-diff)
  */
 const UNIFIED_FILE_DIFF_COMMAND_ID = 'jupyterlab-diff:unified-file-diff';
+
+/**
+ * Helper function to get a document widget by path or use the active one
+ */
+function getDocumentWidget(
+  filepath: string,
+  docManager: IDocumentManager,
+  background?: boolean
+): DocumentWidget | null {
+  let widget = docManager.findWidget(filepath);
+  if (!widget) {
+    widget = docManager.openOrReveal(filepath, undefined, undefined, {
+      activate: !(background ?? true)
+    });
+  }
+
+  if (!(widget instanceof DocumentWidget)) {
+    throw new Error(`Widget for ${filepath} is not a document widget`);
+  }
+
+  return widget;
+}
 
 /**
  * Create a new file of specified type (text, python, markdown, json, etc.)
@@ -40,13 +62,24 @@ function registerCreateFileCommand(
           cwd: {
             type: 'string',
             description: 'Directory where to create the file (optional)'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
           }
         },
         required: ['fileName']
       }
     },
     execute: async (args: any) => {
-      const { fileName, content = '', cwd, fileType = 'text' } = args;
+      const {
+        fileName,
+        cwd,
+        background,
+        content = '',
+        fileType = 'text'
+      } = args;
 
       const registeredFileType = docManager.registry.getFileType(fileType);
       const ext = registeredFileType?.extensions[0] || '.txt';
@@ -80,8 +113,7 @@ function registerCreateFileCommand(
       }
 
       let opened = false;
-      if (!docManager.findWidget(finalPath)) {
-        docManager.openOrReveal(finalPath);
+      if (getDocumentWidget(finalPath, docManager, background)) {
         opened = true;
       }
 
@@ -118,15 +150,20 @@ function registerOpenFileCommand(
           filePath: {
             type: 'string',
             description: 'Path to the file to open'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
           }
         },
         required: ['filePath']
       }
     },
-    execute: async (args: any) => {
-      const { filePath } = args;
+    execute: (args: any) => {
+      const { filePath, background } = args;
 
-      const widget = docManager.openOrReveal(filePath);
+      const widget = getDocumentWidget(filePath, docManager, background);
 
       if (!widget) {
         throw new Error(`Could not open file: ${filePath}`);
@@ -406,20 +443,22 @@ function registerGetFileInfoCommand(
             type: 'string',
             description:
               'Path to the file to read. If not provided, uses the currently active file in the editor.'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
           }
         }
       }
     },
     execute: async (args: any) => {
-      const { filePath } = args;
+      const { filePath, background } = args;
 
       let widget: IDocumentWidget | null = null;
 
       if (filePath) {
-        widget =
-          docManager.findWidget(filePath) ??
-          docManager.openOrReveal(filePath) ??
-          null;
+        widget = getDocumentWidget(filePath, docManager, background);
 
         if (!widget) {
           throw new Error(`Failed to open file at path: ${filePath}`);
@@ -500,19 +539,26 @@ function registerSetFileContentCommand(
             type: 'boolean',
             description:
               'Whether to show a diff view of the changes (default: true)'
+          },
+          background: {
+            type: 'boolean',
+            description:
+              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
           }
         },
         required: ['filePath', 'content']
       }
     },
     execute: async (args: any) => {
-      const { filePath, content, save = true, showDiff = true } = args;
+      const {
+        filePath,
+        content,
+        background,
+        save = true,
+        showDiff = true
+      } = args;
 
-      let widget = docManager.findWidget(filePath);
-
-      if (!widget) {
-        widget = docManager.openOrReveal(filePath);
-      }
+      const widget = getDocumentWidget(filePath, docManager, background);
 
       if (!widget) {
         throw new Error(`Failed to open file at path: ${filePath}`);
