@@ -16,7 +16,7 @@ function getDocumentWidget(
   filepath: string,
   docManager: IDocumentManager,
   background?: boolean
-): DocumentWidget | null {
+): DocumentWidget {
   let widget = docManager.findWidget(filepath);
   if (!widget) {
     widget = docManager.openOrReveal(filepath, undefined, undefined, {
