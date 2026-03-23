@@ -1,3 +1,4 @@
+import type { IJupyterLabPageFixture } from '@jupyterlab/galata';
 import { expect, test } from '@jupyterlab/galata';
 import { executeCommand } from './utils/commands';
 
@@ -6,6 +7,32 @@ const COMMANDS = {
   shutdownKernel: 'jupyterlab-ai-commands:shutdown-kernel',
   startKernel: 'jupyterlab-ai-commands:start-kernel'
 } as const;
+
+async function expectKernelVisibleInRunningTab(
+  page: IJupyterLabPageFixture
+): Promise<void> {
+  await page.sidebar.openTab('jp-running-sessions');
+  await expect(page.sidebar.getContentPanelLocator('left')).toContainText(
+    /Python 3|python3/
+  );
+}
+
+async function shutdownKernelIfStarted(
+  page: IJupyterLabPageFixture,
+  kernelId?: string
+): Promise<void> {
+  if (!kernelId) {
+    return;
+  }
+
+  try {
+    await executeCommand(page, COMMANDS.shutdownKernel, {
+      kernelId
+    });
+  } catch {
+    // Best-effort cleanup. Do not hide the real test failure with a cleanup error.
+  }
+}
 
 test.describe('Kernel Commands', () => {
   test.use({ serverFiles: 'only-on-failure' });
@@ -40,6 +67,7 @@ test.describe('Kernel Commands', () => {
 
       expect(startResult.success).toBe(true);
       kernelId = startResult.kernelId;
+      await expectKernelVisibleInRunningTab(page);
 
       const executionResult = await executeCommand(
         page,
@@ -66,18 +94,7 @@ test.describe('Kernel Commands', () => {
       expect(executionResult.outputs[0].output_type).toBe('stream');
       expect(executionResult.outputs[0].text.trim()).toBe('second');
     } finally {
-      // Always shut down the kernel so failed assertions do not leak sessions.
-      if (kernelId) {
-        const shutdownResult = await executeCommand(
-          page,
-          COMMANDS.shutdownKernel,
-          {
-            kernelId
-          }
-        );
-
-        expect(shutdownResult.success).toBe(true);
-      }
+      await shutdownKernelIfStarted(page, kernelId);
     }
   });
 
@@ -93,6 +110,7 @@ test.describe('Kernel Commands', () => {
 
       expect(startResult.success).toBe(true);
       kernelId = startResult.kernelId;
+      await expectKernelVisibleInRunningTab(page);
 
       const executionResult = await executeCommand(
         page,
@@ -118,17 +136,7 @@ test.describe('Kernel Commands', () => {
       );
       expect(executionResult.outputs[1].data['text/plain']).toBe('second');
     } finally {
-      if (kernelId) {
-        const shutdownResult = await executeCommand(
-          page,
-          COMMANDS.shutdownKernel,
-          {
-            kernelId
-          }
-        );
-
-        expect(shutdownResult.success).toBe(true);
-      }
+      await shutdownKernelIfStarted(page, kernelId);
     }
   });
 
@@ -144,6 +152,7 @@ test.describe('Kernel Commands', () => {
 
       expect(startResult.success).toBe(true);
       kernelId = startResult.kernelId;
+      await expectKernelVisibleInRunningTab(page);
 
       const executionResult = await executeCommand(
         page,
@@ -168,18 +177,7 @@ test.describe('Kernel Commands', () => {
         )
       ).toBe(true);
     } finally {
-      // Always shut down the kernel so failed assertions do not leak sessions.
-      if (kernelId) {
-        const shutdownResult = await executeCommand(
-          page,
-          COMMANDS.shutdownKernel,
-          {
-            kernelId
-          }
-        );
-
-        expect(shutdownResult.success).toBe(true);
-      }
+      await shutdownKernelIfStarted(page, kernelId);
     }
   });
 });
