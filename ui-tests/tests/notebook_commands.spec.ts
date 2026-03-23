@@ -45,27 +45,23 @@ test.describe('Notebook Commands', () => {
     const notebookPath = `${tmpPath}/command-create-and-add.ipynb`;
 
     const createResult = await executeCommand(page, COMMANDS.createNotebook, {
-      background: false,
       language: 'python',
       name: notebookPath
     });
     expect(createResult.success).toBe(true);
 
     const markdownCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       cellType: 'markdown',
       content: '# Title\nBody',
       notebookPath
     });
     const codeCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       cellType: 'code',
       content: 'value = 41\nvalue + 1',
       notebookPath
     });
 
     const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
-      background: false,
       notebookPath
     });
     expect(notebookInfo.success).toBe(true);
@@ -83,7 +79,6 @@ test.describe('Notebook Commands', () => {
     await expectCellInputToContainText(page, 1, 'value + 1');
 
     const saveResult = await executeCommand(page, COMMANDS.saveNotebook, {
-      background: false,
       notebookPath
     });
     expect(saveResult.success).toBe(true);
@@ -96,30 +91,25 @@ test.describe('Notebook Commands', () => {
     const notebookPath = `${tmpPath}/command-add-cell-by-id.ipynb`;
 
     await executeCommand(page, COMMANDS.createNotebook, {
-      background: false,
       language: 'python',
       name: notebookPath
     });
 
     const firstCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       content: 'first = 1',
       notebookPath
     });
     const thirdCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       content: 'third = 3',
       notebookPath
     });
     const secondCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       referenceCellId: firstCell.cellId,
       content: 'second = 2',
       notebookPath,
       position: 'below'
     });
     const zerothCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       referenceCellId: firstCell.cellId,
       content: 'zeroth = 0',
       notebookPath,
@@ -127,7 +117,6 @@ test.describe('Notebook Commands', () => {
     });
 
     const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
-      background: false,
       notebookPath
     });
 
@@ -152,31 +141,26 @@ test.describe('Notebook Commands', () => {
     const notebookPath = `${tmpPath}/command-set-cell-content.ipynb`;
 
     await executeCommand(page, COMMANDS.createNotebook, {
-      background: false,
       language: 'python',
       name: notebookPath
     });
     const codeCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       content: 'before = 1',
       notebookPath
     });
     const markdownCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       cellType: 'markdown',
       content: 'Old text',
       notebookPath
     });
 
     const codeUpdate = await executeCommand(page, COMMANDS.setCellContent, {
-      background: false,
       cellId: codeCell.cellId,
       content: 'answer = 6 * 7',
       notebookPath,
       showDiff: false
     });
     const markdownUpdate = await executeCommand(page, COMMANDS.setCellContent, {
-      background: false,
       cellId: markdownCell.cellId,
       content: '## Updated markdown',
       notebookPath,
@@ -193,7 +177,6 @@ test.describe('Notebook Commands', () => {
     await expectCellInputToContainText(page, 1, 'Updated markdown');
 
     const saveResult = await executeCommand(page, COMMANDS.saveNotebook, {
-      background: false,
       notebookPath
     });
     expect(saveResult.success).toBe(true);
@@ -203,24 +186,20 @@ test.describe('Notebook Commands', () => {
     const notebookPath = `${tmpPath}/command-run-and-delete.ipynb`;
 
     await executeCommand(page, COMMANDS.createNotebook, {
-      background: false,
       language: 'python',
       name: notebookPath
     });
     const alphaCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       content: 'print("alpha")',
       notebookPath
     });
     const betaCell = await executeCommand(page, COMMANDS.addCell, {
-      background: false,
       content: 'print("beta")',
       notebookPath
     });
     await page.locator('#jp-main-statusbar').getByText('Idle').waitFor();
 
     const runResult = await executeCommand(page, COMMANDS.runCell, {
-      background: false,
       cellId: alphaCell.cellId,
       notebookPath
     });
@@ -233,7 +212,6 @@ test.describe('Notebook Commands', () => {
     });
 
     const deleteResult = await executeCommand(page, COMMANDS.deleteCell, {
-      background: false,
       cellId: betaCell.cellId,
       notebookPath
     });
@@ -243,7 +221,6 @@ test.describe('Notebook Commands', () => {
     expect(await page.notebook.getCellType(0)).toBe('code');
 
     const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
-      background: false,
       notebookPath
     });
     expect(notebookInfo.cells).toEqual([
@@ -251,7 +228,6 @@ test.describe('Notebook Commands', () => {
     ]);
 
     const saveResult = await executeCommand(page, COMMANDS.saveNotebook, {
-      background: false,
       notebookPath
     });
     expect(saveResult.success).toBe(true);

@@ -420,10 +420,7 @@ function registerListKernelsCommand(
     label: 'List Kernels',
     caption: 'List all running kernels',
     describedBy: {
-      args: {
-        type: 'object',
-        properties: {}
-      }
+      args: {}
     },
     execute: async () => {
       await kernelManager.ready;
@@ -463,10 +460,7 @@ function registerListKernelSpecsCommand(
     label: 'List Kernel Specs',
     caption: 'List all available kernel specs',
     describedBy: {
-      args: {
-        type: 'object',
-        properties: {}
-      }
+      args: {}
     },
     execute: async () => {
       await kernelSpecManager.ready;

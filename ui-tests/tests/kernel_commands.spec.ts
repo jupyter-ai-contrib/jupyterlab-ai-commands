@@ -66,6 +66,7 @@ test.describe('Kernel Commands', () => {
       expect(executionResult.outputs[0].output_type).toBe('stream');
       expect(executionResult.outputs[0].text.trim()).toBe('second');
     } finally {
+      // Always shut down the kernel so failed assertions do not leak sessions.
       if (kernelId) {
         const shutdownResult = await executeCommand(
           page,
@@ -116,6 +117,7 @@ test.describe('Kernel Commands', () => {
         )
       ).toBe(true);
     } finally {
+      // Always shut down the kernel so failed assertions do not leak sessions.
       if (kernelId) {
         const shutdownResult = await executeCommand(
           page,
