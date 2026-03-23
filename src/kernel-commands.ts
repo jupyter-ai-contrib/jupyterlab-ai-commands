@@ -2,6 +2,8 @@ import { Kernel, KernelMessage, KernelSpec } from '@jupyterlab/services';
 import * as nbformat from '@jupyterlab/nbformat';
 import { CommandRegistry } from '@lumino/commands';
 
+import { findKernelByLanguage } from './kernel-utils';
+
 /**
  * Information about a running kernel
  */
@@ -38,46 +40,6 @@ interface IKernelExecutionResult {
   errorName?: string;
   errorValue?: string;
   traceback?: string[];
-}
-
-/**
- * Find a kernel by language, returning the kernel spec name
- */
-async function findKernelByLanguage(
-  kernelSpecManager: KernelSpec.IManager,
-  language?: string | null
-): Promise<string> {
-  await kernelSpecManager.ready;
-  const specs = kernelSpecManager.specs;
-
-  if (!specs || !specs.kernelspecs) {
-    throw new Error('No kernelspecs are available');
-  }
-
-  const availableKernelNames = Object.keys(specs.kernelspecs);
-  if (availableKernelNames.length === 0) {
-    throw new Error('No kernelspecs are available');
-  }
-
-  if (!language) {
-    return specs.default || availableKernelNames[0];
-  }
-
-  const normalizedLanguage = language.toLowerCase().trim();
-
-  for (const [kernelName, kernelSpec] of Object.entries(specs.kernelspecs)) {
-    if (!kernelSpec) {
-      continue;
-    }
-
-    const kernelLanguage = kernelSpec.language?.toLowerCase() || '';
-
-    if (kernelLanguage === normalizedLanguage) {
-      return kernelName;
-    }
-  }
-
-  throw new Error(`No kernel found for language '${language}'`);
 }
 
 /**
@@ -290,6 +252,15 @@ function registerExecuteInKernelCommand(
           return;
         }
 
+        if (KernelMessage.isUpdateDisplayDataMsg(msg)) {
+          outputs.push({
+            output_type: 'update_display_data',
+            data: msg.content.data,
+            metadata: msg.content.metadata
+          });
+          return;
+        }
+
         if (KernelMessage.isExecuteResultMsg(msg)) {
           outputs.push({
             output_type: 'execute_result',
@@ -420,7 +391,10 @@ function registerListKernelsCommand(
     label: 'List Kernels',
     caption: 'List all running kernels',
     describedBy: {
-      args: {}
+      args: {
+        type: 'object',
+        properties: {}
+      }
     },
     execute: async () => {
       await kernelManager.ready;
@@ -460,7 +434,10 @@ function registerListKernelSpecsCommand(
     label: 'List Kernel Specs',
     caption: 'List all available kernel specs',
     describedBy: {
-      args: {}
+      args: {
+        type: 'object',
+        properties: {}
+      }
     },
     execute: async () => {
       await kernelSpecManager.ready;

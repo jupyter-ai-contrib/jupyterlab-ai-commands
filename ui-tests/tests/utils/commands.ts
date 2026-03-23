@@ -10,6 +10,6 @@ export async function executeCommand<T = any>(
       await window.jupyterapp.started;
       return await window.jupyterapp.commands.execute(command, args);
     },
-    { args, command }
+    { args: { background: false, ...args }, command }
   );
 }

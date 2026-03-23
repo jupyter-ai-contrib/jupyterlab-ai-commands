@@ -81,6 +81,57 @@ test.describe('Kernel Commands', () => {
     }
   });
 
+  test('should return update-display-data messages in kernel execution results', async ({
+    page
+  }) => {
+    let kernelId: string | undefined;
+
+    try {
+      const startResult = await executeCommand(page, COMMANDS.startKernel, {
+        language: 'python'
+      });
+
+      expect(startResult.success).toBe(true);
+      kernelId = startResult.kernelId;
+
+      const executionResult = await executeCommand(
+        page,
+        COMMANDS.executeInKernel,
+        {
+          kernelId,
+          code: [
+            'from IPython.display import display, update_display',
+            'display({"text/plain": "first"}, raw=True, display_id="demo")',
+            'update_display({"text/plain": "second"}, raw=True, display_id="demo")'
+          ].join('\n')
+        }
+      );
+
+      expect(executionResult.success).toBe(true);
+      expect(executionResult.status).toBe('ok');
+      expect(executionResult.outputCount).toBe(2);
+      expect(executionResult.outputs).toHaveLength(2);
+      expect(executionResult.outputs[0].output_type).toBe('display_data');
+      expect(executionResult.outputs[0].data['text/plain']).toBe('first');
+      expect(executionResult.outputs[1].output_type).toBe(
+        'update_display_data'
+      );
+      expect(executionResult.outputs[1].data['text/plain']).toBe('second');
+    } finally {
+      if (kernelId) {
+        const shutdownResult = await executeCommand(
+          page,
+          COMMANDS.shutdownKernel,
+          {
+            kernelId
+          }
+        );
+
+        expect(shutdownResult.success).toBe(true);
+      }
+    }
+  });
+
   test('should return execution errors in the command payload', async ({
     page
   }) => {
