@@ -8,6 +8,8 @@ import { IEditorTracker } from '@jupyterlab/fileeditor';
  * Command IDs for diff management (from jupyterlab-diff)
  */
 const UNIFIED_FILE_DIFF_COMMAND_ID = 'jupyterlab-diff:unified-file-diff';
+const BACKGROUND_DESCRIPTION =
+  'Whether to avoid activating the document widget so as not to disturb the user (default: true)';
 
 /**
  * Helper function to get a document widget by path or use the active one
@@ -53,7 +55,7 @@ function registerCreateFileCommand(
           fileType: {
             type: 'string',
             description:
-              'Type of file to create. Common examples: text, python, markdown, json, javascript, typescript, yaml, julia, r, csv'
+              'Registered JupyterLab file type to create. Common examples: text, python, markdown, json, javascript, typescript, yaml, julia, r, csv'
           },
           content: {
             type: 'string',
@@ -65,8 +67,7 @@ function registerCreateFileCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['fileName']
@@ -82,7 +83,16 @@ function registerCreateFileCommand(
       } = args;
 
       const registeredFileType = docManager.registry.getFileType(fileType);
-      const ext = registeredFileType?.extensions[0] || '.txt';
+      if (!registeredFileType) {
+        throw new Error(`Unknown file type: '${fileType}'`);
+      }
+
+      const ext = registeredFileType.extensions[0];
+      if (!ext) {
+        throw new Error(
+          `File type '${registeredFileType.name}' does not define a default extension`
+        );
+      }
 
       const existingExt = PathExt.extname(fileName);
       const fullFileName = existingExt ? fileName : `${fileName}${ext}`;
@@ -119,10 +129,10 @@ function registerCreateFileCommand(
 
       return {
         success: true,
-        message: `${fileType} file '${fullFileName}' created and opened successfully`,
+        message: `${registeredFileType.name} file '${fullFileName}' created and opened successfully`,
         fileName: fullFileName,
         filePath: finalPath,
-        fileType,
+        fileType: registeredFileType.name,
         hasContent: !!content,
         opened
       };
@@ -153,8 +163,7 @@ function registerOpenFileCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['filePath']
@@ -241,7 +250,7 @@ function registerRenameFileCommand(
           },
           newPath: {
             type: 'string',
-            description: 'New path/name for the file'
+            description: 'New path or name for the file'
           }
         },
         required: ['oldPath', 'newPath']
@@ -285,7 +294,7 @@ function registerCopyFileCommand(
           },
           destinationPath: {
             type: 'string',
-            description: 'Destination path for the copied file'
+            description: 'Exact destination path for the copied file'
           }
         },
         required: ['sourcePath', 'destinationPath']
@@ -294,13 +303,26 @@ function registerCopyFileCommand(
     execute: async (args: any) => {
       const { sourcePath, destinationPath } = args;
 
-      await docManager.services.contents.copy(sourcePath, destinationPath);
+      const destinationDir = PathExt.dirname(destinationPath);
+      const copied = await docManager.services.contents.copy(
+        sourcePath,
+        destinationDir
+      );
+
+      let finalPath = copied.path;
+      if (copied.path !== destinationPath) {
+        const renamed = await docManager.services.contents.rename(
+          copied.path,
+          destinationPath
+        );
+        finalPath = renamed.path;
+      }
 
       return {
         success: true,
-        message: `File copied from '${sourcePath}' to '${destinationPath}' successfully`,
+        message: `File copied from '${sourcePath}' to '${finalPath}' successfully`,
         sourcePath,
-        destinationPath
+        destinationPath: finalPath
       };
     }
   };
@@ -446,8 +468,7 @@ function registerGetFileInfoCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         }
       }
@@ -542,8 +563,7 @@ function registerSetFileContentCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the document widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['filePath', 'content']

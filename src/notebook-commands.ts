@@ -5,6 +5,7 @@ import {
   MarkdownCell
 } from '@jupyterlab/cells';
 import { IDocumentManager } from '@jupyterlab/docmanager';
+import * as nbformat from '@jupyterlab/nbformat';
 import {
   INotebookModel,
   INotebookTracker,
@@ -19,6 +20,25 @@ import { CommandRegistry } from '@lumino/commands';
  */
 const UNIFIED_DIFF_COMMAND_ID = 'jupyterlab-diff:unified-cell-diff';
 const SPLIT_DIFF_COMMAND_ID = 'jupyterlab-diff:split-cell-diff';
+const CELL_TYPE_VALUES = ['code', 'markdown', 'raw'] as const;
+const CELL_POSITION_VALUES = ['above', 'below'] as const;
+const DIFF_MODE_VALUES = ['unified', 'split'] as const;
+const VALID_CELL_TYPES = new Set(CELL_TYPE_VALUES);
+const VALID_CELL_POSITIONS = new Set(CELL_POSITION_VALUES);
+const BACKGROUND_DESCRIPTION =
+  'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)';
+
+type CellExecutionStatus = 'ok' | 'error' | 'abort' | 'no-op';
+
+function getCodeCellOutputs(cellModel: ICodeCellModel): nbformat.IOutput[] {
+  return cellModel.toJSON().outputs ?? [];
+}
+
+function getErrorOutput(
+  outputs: nbformat.IOutput[]
+): nbformat.IError | undefined {
+  return outputs.find(nbformat.isError);
+}
 
 async function findKernelByLanguage(
   kernelSpecManager: KernelSpec.IManager,
@@ -28,11 +48,16 @@ async function findKernelByLanguage(
   const specs = kernelSpecManager.specs;
 
   if (!specs || !specs.kernelspecs) {
-    return 'python3';
+    throw new Error('No kernelspecs are available');
+  }
+
+  const availableKernelNames = Object.keys(specs.kernelspecs);
+  if (availableKernelNames.length === 0) {
+    throw new Error('No kernelspecs are available');
   }
 
   if (!language) {
-    return specs.default || Object.keys(specs.kernelspecs)[0] || 'python3';
+    return specs.default || availableKernelNames[0];
   }
 
   const normalizedLanguage = language.toLowerCase().trim();
@@ -49,8 +74,7 @@ async function findKernelByLanguage(
     }
   }
 
-  console.warn(`No kernel found for language '${language}', using default`);
-  return specs.default || Object.keys(specs.kernelspecs)[0] || 'python3';
+  throw new Error(`No kernel found for language '${language}'`);
 }
 
 /**
@@ -155,16 +179,16 @@ function registerCreateNotebookCommand(
           language: {
             type: 'string',
             description:
-              'The programming language for the notebook (e.g., python, r, julia, javascript, etc.). Will use system default if not specified.'
+              'Programming language for the notebook (for example python, r, julia, or javascript). If omitted, the default kernel is used.'
           },
           name: {
             type: 'string',
-            description: 'Name for the notebook file (without .ipynb extension)'
+            description:
+              'Name for the notebook file (without the .ipynb extension)'
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['name']
@@ -259,17 +283,18 @@ function registerAddCellCommand(
           },
           cellType: {
             type: 'string',
-            description: 'Type of cell to add (code, markdown, raw)'
+            description: 'Type of cell to add',
+            enum: [...CELL_TYPE_VALUES]
           },
           position: {
             type: 'string',
             description:
-              'Position relative to the reference or active cell (above or below)'
+              'Position relative to the reference or active cell (above or below)',
+            enum: [...CELL_POSITION_VALUES]
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         }
       }
@@ -304,6 +329,18 @@ function registerAddCellCommand(
       if (position !== 'above' && position !== 'below') {
         throw new Error(
           `Invalid position '${position}'. Expected 'above' or 'below'.`
+        );
+      }
+
+      if (!VALID_CELL_TYPES.has(cellType)) {
+        throw new Error(
+          `Invalid cell type: '${cellType}'. Expected one of: code, markdown, raw`
+        );
+      }
+
+      if (!VALID_CELL_POSITIONS.has(position)) {
+        throw new Error(
+          `Invalid cell position: '${position}'. Expected one of: above, below`
         );
       }
 
@@ -385,8 +422,7 @@ function registerGetNotebookInfoCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         }
       }
@@ -471,8 +507,7 @@ function registerGetCellInfoCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         }
       }
@@ -557,13 +592,12 @@ function registerSetCellContentCommand(
           },
           diffMode: {
             type: 'string',
-            description:
-              'Display mode for the diff view: "unified" or "split" (default: "unified")'
+            description: 'Display mode for the diff view',
+            enum: [...DIFF_MODE_VALUES]
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['content']
@@ -667,12 +701,11 @@ function registerRunCellCommand(
           },
           recordTiming: {
             type: 'boolean',
-            description: 'Whether to record execution timing'
+            description: 'Whether to record execution timing (default: true)'
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['cellId']
@@ -707,26 +740,114 @@ function registerRunCellCommand(
       }
 
       if (cellWidget instanceof CodeCell) {
-        const sessionCtx = currentWidget.sessionContext;
-        await CodeCell.execute(cellWidget, sessionCtx, {
-          recordTiming,
-          deletedCells: model.deletedCells
-        });
-
         const codeModel = cellWidget.model as ICodeCellModel;
-        return {
-          success: true,
-          message: `Cell with ID '${cellId}' executed successfully`,
-          cellId,
-          executionCount: codeModel.executionCount,
-          hasOutput: codeModel.outputs.length > 0
-        };
+        const source = codeModel.sharedModel.getSource();
+        if (!source.trim()) {
+          return {
+            success: true,
+            status: 'no-op',
+            message: `Cell with ID '${cellId}' is empty, no execution needed`,
+            cellId,
+            cellType: codeModel.type,
+            executionCount: codeModel.executionCount,
+            outputs: [],
+            hasOutput: false
+          };
+        }
+
+        const sessionCtx = currentWidget.sessionContext;
+        await sessionCtx.ready;
+
+        if (!sessionCtx.session?.kernel) {
+          return {
+            success: false,
+            status: 'error',
+            message: `Cell with ID '${cellId}' cannot be executed without an active kernel`,
+            cellId,
+            cellType: codeModel.type,
+            executionCount: codeModel.executionCount,
+            outputs: [],
+            hasOutput: false,
+            errorName: 'MissingKernel',
+            errorValue: 'No active kernel is attached to the notebook session'
+          };
+        }
+
+        try {
+          const reply = await CodeCell.execute(cellWidget, sessionCtx, {
+            recordTiming,
+            deletedCells: model.deletedCells
+          });
+
+          const outputs = getCodeCellOutputs(codeModel);
+          const errorOutput = getErrorOutput(outputs);
+          const replyContent = reply?.content;
+          let status: CellExecutionStatus = replyContent?.status ?? 'no-op';
+          let errorName: string | undefined;
+          let errorValue: string | undefined;
+          let traceback: string[] | undefined;
+
+          if (replyContent?.status === 'error') {
+            errorName = replyContent.ename;
+            errorValue = replyContent.evalue;
+            traceback = replyContent.traceback;
+          } else if (errorOutput) {
+            status = 'error';
+            errorName = errorOutput.ename;
+            errorValue = errorOutput.evalue;
+            traceback = errorOutput.traceback;
+          }
+
+          return {
+            success: status === 'ok' || status === 'no-op',
+            status,
+            message:
+              status === 'ok'
+                ? `Cell with ID '${cellId}' executed successfully`
+                : status === 'abort'
+                  ? `Cell with ID '${cellId}' execution was aborted`
+                  : status === 'no-op'
+                    ? `Cell with ID '${cellId}' did not produce an execution request`
+                    : `Cell with ID '${cellId}' execution failed`,
+            cellId,
+            cellType: codeModel.type,
+            executionCount: codeModel.executionCount,
+            outputs,
+            hasOutput: outputs.length > 0,
+            errorName,
+            errorValue,
+            traceback
+          };
+        } catch (error) {
+          const outputs = getCodeCellOutputs(codeModel);
+          const errorOutput = getErrorOutput(outputs);
+          const errorValue =
+            error instanceof Error ? error.message : String(error);
+
+          return {
+            success: false,
+            status: 'error',
+            message: `Cell with ID '${cellId}' execution failed`,
+            cellId,
+            cellType: codeModel.type,
+            executionCount: codeModel.executionCount,
+            outputs,
+            hasOutput: outputs.length > 0,
+            errorName: errorOutput?.ename || 'ExecutionError',
+            errorValue: errorOutput?.evalue || errorValue,
+            traceback: errorOutput?.traceback
+          };
+        }
       } else {
         return {
           success: true,
+          status: 'no-op',
           message: `Cell with ID '${cellId}' is not a code cell, no execution needed`,
           cellId,
-          cellType: cellWidget.model.type
+          cellType: cellWidget.model.type,
+          executionCount: null,
+          outputs: [],
+          hasOutput: false
         };
       }
     }
@@ -762,8 +883,7 @@ function registerDeleteCellCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         },
         required: ['cellId']
@@ -829,8 +949,7 @@ function registerSaveNotebookCommand(
           },
           background: {
             type: 'boolean',
-            description:
-              'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)'
+            description: BACKGROUND_DESCRIPTION
           }
         }
       }

@@ -33,7 +33,7 @@ This extension provides the following commands for AI-assisted interactions with
 - **`jupyterlab-ai-commands:create-file`** - Create a new file of specified type (text, python, markdown, json, etc.)
   - Arguments:
     - `fileName` (string): Name of the file to create
-    - `fileType` (string): Type of file to create (e.g., text, python, markdown, json, javascript, typescript, yaml, julia, r, csv)
+    - `fileType` (string): Registered JupyterLab file type to create (e.g., text, python, markdown, json, javascript, typescript, yaml, julia, r, csv). Unknown file types will raise an error
     - `content` (string, optional): Initial content for the file
     - `cwd` (string, optional): Directory where to create the file
 
@@ -53,7 +53,7 @@ This extension provides the following commands for AI-assisted interactions with
 - **`jupyterlab-ai-commands:copy-file`** - Copy a file to a new location
   - Arguments:
     - `sourcePath` (string): Path of the file to copy
-    - `destinationPath` (string): Destination path for the copied file
+    - `destinationPath` (string): Exact destination path for the copied file
 
 - **`jupyterlab-ai-commands:navigate-to-directory`** - Navigate to a specific directory in the file browser
   - Arguments:
@@ -79,7 +79,7 @@ This extension provides the following commands for AI-assisted interactions with
 
 - **`jupyterlab-ai-commands:create-notebook`** - Create a new Jupyter notebook with a kernel for the specified programming language
   - Arguments:
-    - `language` (string, optional): The programming language for the notebook (e.g., python, r, julia, javascript, etc.). Will use system default if not specified
+    - `language` (string, optional): The programming language for the notebook (e.g., python, r, julia, javascript, etc.). Will use the default kernel if not specified, and raise an error if no matching kernel exists
     - `name` (string): Name for the notebook file (without .ipynb extension)
 
 - **`jupyterlab-ai-commands:add-cell`** - Add a cell to the current notebook with optional content
@@ -112,6 +112,14 @@ This extension provides the following commands for AI-assisted interactions with
     - `notebookPath` (string, optional): Path to the notebook file. If not provided, uses the currently active notebook
     - `cellId` (string): nbformat cell ID of the cell to run
     - `recordTiming` (boolean, optional): Whether to record execution timing (default: true)
+  - Returns:
+    - `success` (boolean): Whether the execution completed successfully
+    - `status` (string): Execution status ("ok", "error", "abort", or "no-op")
+    - `executionCount` (number | null): The execution count after the run
+    - `outputs` (array): Serialized cell outputs
+    - `errorName` (string, optional): Error name if execution failed
+    - `errorValue` (string, optional): Error value if execution failed
+    - `traceback` (array, optional): Error traceback if execution failed
 
 - **`jupyterlab-ai-commands:delete-cell`** - Delete a specific cell from the notebook by cell ID
   - Arguments:
@@ -126,8 +134,8 @@ This extension provides the following commands for AI-assisted interactions with
 
 - **`jupyterlab-ai-commands:start-kernel`** - Start a new kernel with the specified language or kernel name
   - Arguments:
-    - `language` (string, optional): The programming language for the kernel (e.g., python, r, julia). If not provided, uses system default
-    - `kernelName` (string, optional): The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language
+    - `language` (string, optional): The programming language for the kernel (e.g., python, r, julia). If not provided, uses the default kernel
+    - `kernelName` (string, optional): The specific kernel spec name to use (e.g., python3, ir). If provided, takes precedence over language and must exist
   - Returns:
     - `success` (boolean): Whether the kernel was started successfully
     - `message` (string): Status message
@@ -145,8 +153,11 @@ This extension provides the following commands for AI-assisted interactions with
   - Returns:
     - `success` (boolean): Whether the execution completed successfully
     - `status` (string): Execution status ("ok", "error", or "abort")
+    - `message` (string): Status message
+    - `kernelId` (string): The kernel ID used for execution
     - `executionCount` (number): The execution count
-    - `outputs` (array): Array of output objects (stream, display_data, execute_result, error)
+    - `outputCount` (number): Number of outputs returned
+    - `outputs` (array): Output objects captured during execution
     - `errorName` (string, optional): Error name if status is "error"
     - `errorValue` (string, optional): Error value if status is "error"
     - `traceback` (array, optional): Error traceback if status is "error"
