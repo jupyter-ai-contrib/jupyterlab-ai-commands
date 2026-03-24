@@ -163,6 +163,7 @@ test.describe('Notebook Commands', () => {
     });
 
     expect(notebookInfo.cellCount).toBe(3);
+    expect(notebookInfo.activeCellId).toBe(cellC.cellId);
     expect(notebookInfo.cells.map((cell: any) => cell.cellId)).toEqual([
       cellA.cellId,
       cellB.cellId,
