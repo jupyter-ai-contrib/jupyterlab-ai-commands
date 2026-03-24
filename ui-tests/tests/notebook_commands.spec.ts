@@ -134,6 +134,46 @@ test.describe('Notebook Commands', () => {
     await expectCellInputToContainText(page, 3, 'third = 3');
   });
 
+  test('should add cells below in correct order without referenceCellId', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/command-add-cell-order.ipynb`;
+
+    await executeCommand(page, COMMANDS.createNotebook, {
+      language: 'python',
+      name: notebookPath
+    });
+
+    const cellA = await executeCommand(page, COMMANDS.addCell, {
+      content: 'a = 1',
+      notebookPath
+    });
+    const cellB = await executeCommand(page, COMMANDS.addCell, {
+      content: 'b = 2',
+      notebookPath
+    });
+    const cellC = await executeCommand(page, COMMANDS.addCell, {
+      content: 'c = 3',
+      notebookPath
+    });
+
+    const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath
+    });
+
+    expect(notebookInfo.cellCount).toBe(3);
+    expect(notebookInfo.cells.map((cell: any) => cell.cellId)).toEqual([
+      cellA.cellId,
+      cellB.cellId,
+      cellC.cellId
+    ]);
+
+    await expectCellInputToContainText(page, 0, 'a = 1');
+    await expectCellInputToContainText(page, 1, 'b = 2');
+    await expectCellInputToContainText(page, 2, 'c = 3');
+  });
+
   test('should update notebook cells through set-cell-content', async ({
     page,
     tmpPath

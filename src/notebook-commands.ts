@@ -329,6 +329,7 @@ function registerAddCellCommand(
 
       model.sharedModel.insertCell(insertIndex, newCellData);
       const newCellIndex = insertIndex;
+      notebook.activeCellIndex = newCellIndex;
       const newCell = model.cells.get(newCellIndex);
 
       if (!newCell) {
