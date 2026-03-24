@@ -82,7 +82,7 @@ function registerStartKernelCommand(
         if (!specs || !specs.kernelspecs) {
           throw new Error('No kernelspecs are available');
         }
-        if (specs?.kernelspecs && !specs.kernelspecs[kernelName]) {
+        if (!specs.kernelspecs[kernelName]) {
           throw new Error(`No kernel spec found with name '${kernelName}'`);
         }
         targetKernelName = kernelName;

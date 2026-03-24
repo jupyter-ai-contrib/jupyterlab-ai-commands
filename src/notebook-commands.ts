@@ -291,12 +291,6 @@ function registerAddCellCommand(
       const notebook = currentWidget.content;
       const model = getNotebookModel(currentWidget);
 
-      if (position !== 'above' && position !== 'below') {
-        throw new Error(
-          `Invalid position '${position}'. Expected 'above' or 'below'.`
-        );
-      }
-
       if (!VALID_CELL_TYPES.has(cellType)) {
         throw new Error(
           `Invalid cell type: '${cellType}'. Expected one of: code, markdown, raw`
