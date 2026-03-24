@@ -169,8 +169,15 @@ function registerOpenFileCommand(
         required: ['filePath']
       }
     },
-    execute: (args: any) => {
+    execute: async (args: any) => {
       const { filePath, background } = args;
+
+      // Check that the file exists before trying to open it
+      try {
+        await docManager.services.contents.get(filePath, { content: false });
+      } catch {
+        throw new Error(`File not found: ${filePath}`);
+      }
 
       const widget = getDocumentWidget(filePath, docManager, background);
 
