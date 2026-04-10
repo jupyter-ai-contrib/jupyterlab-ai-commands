@@ -1,8 +1,14 @@
 import { PathExt } from '@jupyterlab/coreutils';
-import { CommandRegistry } from '@lumino/commands';
 import { IDocumentManager } from '@jupyterlab/docmanager';
-import { DocumentWidget, IDocumentWidget } from '@jupyterlab/docregistry';
+import {
+  Context,
+  DocumentRegistry,
+  DocumentWidget,
+  IDocumentWidget
+} from '@jupyterlab/docregistry';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
+import { ServiceManager } from '@jupyterlab/services';
+import { CommandRegistry } from '@lumino/commands';
 
 /**
  * Command IDs for diff management (from jupyterlab-diff)
@@ -14,23 +20,48 @@ const BACKGROUND_DESCRIPTION =
 /**
  * Helper function to get a document widget by path or use the active one
  */
-function getDocumentWidget(
+async function getDocumentWidget(
   filepath: string,
   docManager: IDocumentManager,
-  background?: boolean
-): DocumentWidget {
+  background?: boolean,
+  createWidget = true
+): Promise<DocumentWidget | null> {
   let widget = docManager.findWidget(filepath);
-  if (!widget) {
+  if (!widget && createWidget) {
     widget = docManager.openOrReveal(filepath, undefined, undefined, {
       activate: !(background ?? true)
     });
   }
 
-  if (!(widget instanceof DocumentWidget)) {
+  if (!(widget instanceof DocumentWidget) && createWidget) {
     throw new Error(`Widget for ${filepath} is not a document widget`);
   }
+  await widget?.context.ready;
 
-  return widget;
+  return (widget as DocumentWidget) ?? null;
+}
+
+/**
+ * Helper function to get a document context without widget
+ */
+async function getDocumentContext(
+  docManager: IDocumentManager,
+  manager: ServiceManager.IManager,
+  path: string
+): Promise<DocumentRegistry.IContext<DocumentRegistry.IModel> | null> {
+  const { registry } = docManager;
+  const modelName = registry.defaultWidgetFactory(path).modelName;
+  if (!modelName) {
+    return null;
+  }
+  const factory = registry.getModelFactory(modelName);
+  if (!factory) {
+    return null;
+  }
+  const context = new Context({ manager, factory, path });
+  await context.initialize(false);
+  await context.ready;
+  return context;
 }
 
 /**
@@ -123,7 +154,7 @@ function registerCreateFileCommand(
       }
 
       let opened = false;
-      if (getDocumentWidget(finalPath, docManager, background)) {
+      if (await getDocumentWidget(finalPath, docManager, background)) {
         opened = true;
       }
 
@@ -179,7 +210,7 @@ function registerOpenFileCommand(
         throw new Error(`File not found: ${filePath}`);
       }
 
-      const widget = getDocumentWidget(filePath, docManager, background);
+      const widget = await getDocumentWidget(filePath, docManager, background);
 
       if (!widget) {
         throw new Error(`Could not open file: ${filePath}`);
@@ -458,7 +489,8 @@ function registerListDirectoryCommand(
 function registerGetFileInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
-  editorTracker?: IEditorTracker
+  editorTracker?: IEditorTracker,
+  serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-file-info',
@@ -476,24 +508,49 @@ function registerGetFileInfoCommand(
           background: {
             type: 'boolean',
             description: BACKGROUND_DESCRIPTION
+          },
+          createWidget: {
+            type: 'boolean',
+            description:
+              'Whether to open the document widget if it is not opened. Default to false to avoid unnecessary disruption'
           }
         }
       }
     },
     execute: async (args: any) => {
-      const { filePath, background } = args;
+      const { filePath, background, createWidget } = args;
 
       let widget: IDocumentWidget | null = null;
+      let context: DocumentRegistry.IContext<DocumentRegistry.IModel> | null =
+        null;
 
       if (filePath) {
-        widget = getDocumentWidget(filePath, docManager, background);
+        widget = await getDocumentWidget(
+          filePath,
+          docManager,
+          background,
+          (createWidget ?? false) || !serviceManager
+        );
+        context = widget?.context ?? null;
 
         if (!widget) {
-          throw new Error(`Failed to open file at path: ${filePath}`);
+          if (createWidget) {
+            throw new Error(`Failed to open file at path: ${filePath}`);
+          } else if (serviceManager) {
+            context = await getDocumentContext(
+              docManager,
+              serviceManager,
+              filePath
+            );
+          } else {
+            throw new Error(
+              `Failed to get the content of ${filePath}, the service manager is not available`
+            );
+          }
         }
       } else {
         widget = editorTracker?.currentWidget ?? null;
-
+        context = widget?.context ?? null;
         if (!widget) {
           throw new Error(
             'No active file in the editor and no file path provided'
@@ -501,13 +558,11 @@ function registerGetFileInfoCommand(
         }
       }
 
-      if (!widget.context) {
+      if (!context) {
         throw new Error('Widget is not a document');
       }
 
-      await widget.context.ready;
-
-      const model = widget.context.model;
+      const model = context.model;
 
       if (!model) {
         throw new Error('File model not available');
@@ -515,8 +570,8 @@ function registerGetFileInfoCommand(
 
       const sharedModel = model.sharedModel;
       const content = sharedModel.getSource();
-      const resolvedFilePath = widget.context.path;
-      const fileName = widget.title.label;
+      const resolvedFilePath = widget?.context.path ?? filePath;
+      const fileName = widget?.title.label ?? PathExt.basename(filePath);
       const fileExtension = PathExt.extname(resolvedFilePath) || 'unknown';
 
       return {
@@ -527,7 +582,7 @@ function registerGetFileInfoCommand(
         content,
         isDirty: model.dirty,
         readOnly: model.readOnly,
-        widgetType: widget.constructor.name
+        widgetType: widget?.constructor.name
       };
     }
   };
@@ -585,13 +640,11 @@ function registerSetFileContentCommand(
         showDiff = true
       } = args;
 
-      const widget = getDocumentWidget(filePath, docManager, background);
+      const widget = await getDocumentWidget(filePath, docManager, background);
 
       if (!widget) {
         throw new Error(`Failed to open file at path: ${filePath}`);
       }
-
-      await widget.context.ready;
 
       const model = widget.context.model;
 
@@ -644,6 +697,7 @@ export interface IRegisterFileCommandsOptions {
   commands: CommandRegistry;
   docManager: IDocumentManager;
   editorTracker?: IEditorTracker;
+  serviceManager?: ServiceManager.IManager;
 }
 
 /**
@@ -652,7 +706,7 @@ export interface IRegisterFileCommandsOptions {
 export function registerFileCommands(
   options: IRegisterFileCommandsOptions
 ): void {
-  const { commands, docManager, editorTracker } = options;
+  const { commands, docManager, editorTracker, serviceManager } = options;
 
   registerCreateFileCommand(commands, docManager);
   registerOpenFileCommand(commands, docManager);
@@ -661,6 +715,11 @@ export function registerFileCommands(
   registerCopyFileCommand(commands, docManager);
   registerNavigateToDirectoryCommand(commands);
   registerListDirectoryCommand(commands, docManager);
-  registerGetFileInfoCommand(commands, docManager, editorTracker);
+  registerGetFileInfoCommand(
+    commands,
+    docManager,
+    editorTracker,
+    serviceManager
+  );
   registerSetFileContentCommand(commands, docManager);
 }
