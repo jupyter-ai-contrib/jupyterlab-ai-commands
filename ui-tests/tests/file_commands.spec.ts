@@ -61,4 +61,41 @@ test.describe('File Commands', () => {
     expect(copiedInfo.content).toBe(sourceInfo.content);
     expect(copiedInfo.content).toBe('print("alpha")\n');
   });
+
+  test('Should get file info without opening the widget', async ({
+    page,
+    tmpPath
+  }) => {
+    const filename = 'test.txt';
+    const filePath = `${tmpPath}/${filename}`;
+    await page.contents.uploadContent('Test content', 'text', filePath);
+    const fileInfo = await executeCommand(page, COMMANDS.getFileInfo, {
+      filePath
+    });
+    expect(fileInfo.success).toBe(true);
+    expect(fileInfo.filePath).toBe(filePath);
+    expect(fileInfo.content).toBe('Test content');
+
+    expect(page.activity.getTabLocator(filename)).toHaveCount(0);
+    await page.contents.deleteFile(filePath);
+  });
+
+  test('Should get file info and open the widget', async ({
+    page,
+    tmpPath
+  }) => {
+    const filename = 'test.txt';
+    const filePath = `${tmpPath}/${filename}`;
+    await page.contents.uploadContent('Test content', 'text', filePath);
+    const fileInfo = await executeCommand(page, COMMANDS.getFileInfo, {
+      filePath,
+      createWidget: true
+    });
+    expect(fileInfo.success).toBe(true);
+    expect(fileInfo.filePath).toBe(filePath);
+    expect(fileInfo.content).toBe('Test content');
+
+    expect(page.activity.getTabLocator(filename)).toHaveCount(1);
+    await page.contents.deleteFile(filePath);
+  });
 });

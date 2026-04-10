@@ -15,3 +15,5 @@ c.ServerApp.port = int(os.environ.get("JL_UI_TEST_PORT", "8888"))
 
 # Uncomment to set server log level to debug level
 # c.ServerApp.log_level = "DEBUG"
+
+c.FileContentsManager.delete_to_trash = False

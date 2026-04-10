@@ -278,3 +278,77 @@ test.describe('Notebook Commands', () => {
     expect(output?.[0].trim()).toBe('alpha');
   });
 });
+
+test.describe('Opening Notebook widget', () => {
+  test.use({ serverFiles: 'only-on-failure' });
+  const notebookName = 'get-notebook-info.ipynb';
+
+  test.beforeEach(async ({ page }) => {
+    await page.notebook.createNew(notebookName);
+    await page.notebook.setCell(0, 'markdown', '# Title\nBody');
+    await page.notebook.save();
+    await page.notebook.close();
+  });
+
+  test.afterEach(async ({ page, tmpPath }) => {
+    const notebookPath = `${tmpPath}/${notebookName}`;
+    await page.contents.deleteFile(notebookPath);
+  });
+
+  test('Should get notebook and cell info without opening the widget', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/${notebookName}`;
+
+    const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath
+    });
+    expect(notebookInfo.success).toBe(true);
+    expect(notebookInfo.notebookPath).toBe(notebookPath);
+    expect(notebookInfo.cellCount).toBe(1);
+    const cellId = notebookInfo.cells[0].cellId;
+
+    expect(page.activity.getTabLocator(notebookName)).toHaveCount(0);
+
+    const cellInfo = await executeCommand(page, COMMANDS.getCellInfo, {
+      notebookPath,
+      cellId
+    });
+
+    expect(cellInfo.success).toBe(true);
+    expect(cellInfo.cellId).toBe(cellId);
+    expect(cellInfo.cellType).toBe('markdown');
+    expect(page.activity.getTabLocator(notebookName)).toHaveCount(0);
+  });
+
+  test('Should get notebook and cell info and open the widget', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/${notebookName}`;
+
+    const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath,
+      createWidget: true
+    });
+    expect(notebookInfo.success).toBe(true);
+    expect(notebookInfo.notebookPath).toBe(notebookPath);
+    expect(notebookInfo.cellCount).toBe(1);
+    const cellId = notebookInfo.cells[0].cellId;
+
+    expect(page.activity.getTabLocator(notebookName)).toHaveCount(1);
+    await page.notebook.close();
+
+    const cellInfo = await executeCommand(page, COMMANDS.getCellInfo, {
+      notebookPath,
+      cellId,
+      createWidget: true
+    });
+
+    expect(cellInfo.success).toBe(true);
+    expect(cellInfo.cellId).toBe(cellId);
+    expect(cellInfo.cellType).toBe('markdown');
+    expect(page.activity.getTabLocator(notebookName)).toHaveCount(1);
+  });
+});
