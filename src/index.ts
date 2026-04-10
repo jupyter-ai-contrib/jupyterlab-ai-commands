@@ -38,11 +38,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
       editorTracker
     });
 
-    const kernelSpecManager = app.serviceManager.kernelspecs;
+    const serviceManager = app.serviceManager;
     registerNotebookCommands({
       commands,
       docManager,
-      kernelSpecManager,
+      serviceManager,
       notebookTracker
     });
 
@@ -50,7 +50,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     registerKernelCommands({
       commands,
       kernelManager,
-      kernelSpecManager
+      kernelSpecManager: serviceManager.kernelspecs
     });
 
     if (settingRegistry) {

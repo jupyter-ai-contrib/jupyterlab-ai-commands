@@ -1,18 +1,21 @@
+import type { YNotebook } from '@jupyter/ydoc';
 import {
   CodeCell,
   ICellModel,
   ICodeCellModel,
   MarkdownCell
 } from '@jupyterlab/cells';
+import { PathExt } from '@jupyterlab/coreutils';
 import { IDocumentManager } from '@jupyterlab/docmanager';
+import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
 import * as nbformat from '@jupyterlab/nbformat';
 import {
   INotebookModel,
   INotebookTracker,
+  NotebookModelFactory,
   NotebookPanel
 } from '@jupyterlab/notebook';
-import type { YNotebook } from '@jupyter/ydoc';
-import { KernelSpec } from '@jupyterlab/services';
+import { KernelSpec, ServiceManager } from '@jupyterlab/services';
 import { CommandRegistry } from '@lumino/commands';
 
 import { findKernelByLanguage } from './kernel-utils';
@@ -45,38 +48,44 @@ function getErrorOutput(
 /**
  * Helper function to get a notebook widget by path or use the active one
  */
-function getNotebookWidget(
+async function getNotebookWidget(
   notebookPath: string | null | undefined,
   docManager: IDocumentManager,
   notebookTracker?: INotebookTracker,
-  background?: boolean
-): NotebookPanel | null {
+  background?: boolean,
+  createWidget = true
+): Promise<NotebookPanel | null> {
   if (notebookPath) {
     let widget = docManager.findWidget(notebookPath);
-    if (!widget) {
+    if (!widget && createWidget) {
       widget = docManager.openOrReveal(notebookPath, 'default', undefined, {
         activate: !(background ?? true)
       });
     }
 
-    if (!(widget instanceof NotebookPanel)) {
+    if (!(widget instanceof NotebookPanel) && createWidget) {
       throw new Error(`Widget for ${notebookPath} is not a notebook panel`);
     }
+    await widget?.context.ready;
 
-    return widget ?? null;
+    return (widget as NotebookPanel) ?? null;
   } else {
     return notebookTracker?.currentWidget || null;
   }
 }
 
-function getNotebookModel(notebookPanel: NotebookPanel): INotebookModel {
-  const model = notebookPanel.content.model;
-
-  if (!model) {
-    throw new Error('No notebook model available');
-  }
-
-  return model;
+/**
+ * Helper function to get a notebook context without widget
+ */
+async function getNotebookContext(
+  manager: ServiceManager.IManager,
+  path: string
+): Promise<DocumentRegistry.IContext<INotebookModel>> {
+  const factory = new NotebookModelFactory();
+  const context = new Context({ manager, factory, path });
+  await context.initialize(false);
+  await context.ready;
+  return context;
 }
 
 function findCellIndexById(model: INotebookModel, cellId: string): number {
@@ -90,20 +99,18 @@ function findCellIndexById(model: INotebookModel, cellId: string): number {
 }
 
 function getCellTarget(
-  notebookPanel: NotebookPanel,
-  cellId?: string | null
+  notebookModel: INotebookModel,
+  cellId?: string | null,
+  notebookPanel?: NotebookPanel | null
 ): { cell: ICellModel; cellIndex: number } {
-  const notebook = notebookPanel.content;
-  const model = getNotebookModel(notebookPanel);
-
   if (cellId !== undefined && cellId !== null) {
-    const cellIndex = findCellIndexById(model, cellId);
+    const cellIndex = findCellIndexById(notebookModel, cellId);
 
     if (cellIndex === -1) {
       throw new Error(`Cell with ID '${cellId}' not found in notebook`);
     }
 
-    const cell = model.cells.get(cellIndex);
+    const cell = notebookModel.cells.get(cellIndex);
     if (!cell) {
       throw new Error(`Cell with ID '${cellId}' not found in notebook`);
     }
@@ -111,12 +118,17 @@ function getCellTarget(
     return { cell, cellIndex };
   }
 
-  const cellIndex = notebook.activeCellIndex;
-  if (cellIndex === -1 || cellIndex >= model.cells.length) {
+  const notebook = notebookPanel?.content;
+  const cellIndex = notebook?.activeCellIndex;
+  if (
+    cellIndex === undefined ||
+    cellIndex === -1 ||
+    cellIndex >= notebookModel.cells.length
+  ) {
     throw new Error('No active cell or invalid active cell index');
   }
 
-  const cell = model.cells.get(cellIndex);
+  const cell = notebookModel.cells.get(cellIndex);
   if (!cell) {
     throw new Error(`Cell at active index ${cellIndex} not found`);
   }
@@ -194,7 +206,7 @@ function registerCreateNotebookCommand(
       await notebook.context.ready;
 
       // Persist cell IDs by saving newly created notebooks as nbformat 4.5+.
-      const model = getNotebookModel(notebook);
+      const model = notebook.context.model;
       const sharedModel = model.sharedModel as YNotebook;
       if (sharedModel.nbformat_minor < 5) {
         sharedModel.nbformat_minor = 5;
@@ -274,7 +286,7 @@ function registerAddCellCommand(
         position = 'below'
       } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
@@ -289,7 +301,7 @@ function registerAddCellCommand(
       }
 
       const notebook = currentWidget.content;
-      const model = getNotebookModel(currentWidget);
+      const model = currentWidget.context.model;
 
       if (!VALID_CELL_TYPES.has(cellType)) {
         throw new Error(
@@ -313,8 +325,9 @@ function registerAddCellCommand(
         insertIndex = 0;
       } else if (model.cells.length > 0) {
         const { cellIndex: referenceCellIndex } = getCellTarget(
-          currentWidget,
-          referenceCellId
+          model,
+          referenceCellId,
+          currentWidget
         );
 
         insertIndex =
@@ -364,7 +377,8 @@ function registerAddCellCommand(
 function registerGetNotebookInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
-  notebookTracker?: INotebookTracker
+  notebookTracker?: INotebookTracker,
+  serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-notebook-info',
@@ -383,32 +397,52 @@ function registerGetNotebookInfoCommand(
           background: {
             type: 'boolean',
             description: BACKGROUND_DESCRIPTION
+          },
+          createWidget: {
+            type: 'boolean',
+            description:
+              'Whether to open the Notebook widget if it is not opened. Default to false to avoid unnecessary disruption'
           }
         }
       }
     },
-    execute: (args: any) => {
-      const { notebookPath, background } = args;
+    execute: async (args: any) => {
+      const { notebookPath, background, createWidget } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
-        background
+        background,
+        // Create the Notebook widget if explicitly requested or if the service manager is not available.
+        (createWidget ?? false) || !serviceManager
       );
+      let context = currentWidget?.context;
       if (!currentWidget) {
-        throw new Error(
-          notebookPath
-            ? `Failed to open notebook at path: ${notebookPath}`
-            : 'No active notebook and no notebook path provided'
-        );
+        if (createWidget) {
+          throw new Error(
+            notebookPath
+              ? `Failed to open notebook at path: ${notebookPath}`
+              : 'No active notebook and no notebook path provided'
+          );
+        } else if (serviceManager) {
+          context = await getNotebookContext(serviceManager, notebookPath);
+        } else {
+          throw new Error(
+            `Failed to get the content of ${notebookPath}, the service manager is not available`
+          );
+        }
       }
 
-      const notebook = currentWidget.content;
-      const model = getNotebookModel(currentWidget);
+      if (!context) {
+        throw new Error(`Failed to get the context of ${notebookPath}`);
+      }
+
+      const notebook = currentWidget?.content;
+      const model = context.model;
 
       const cellCount = model.cells.length;
-      const activeCell = notebook.activeCell;
+      const activeCell = notebook?.activeCell;
       const activeCellId = activeCell?.model.id || null;
       const activeCellType = activeCell?.model.type || 'unknown';
       const cells = Array.from({ length: cellCount }, (_, index) => {
@@ -420,11 +454,11 @@ function registerGetNotebookInfoCommand(
         };
       });
       const notebookMetadata = model.metadata;
-
       return {
         success: true,
-        notebookName: currentWidget.title.label,
-        notebookPath: currentWidget.context.path,
+        notebookName:
+          currentWidget?.title.label ?? PathExt.basename(notebookPath),
+        notebookPath: currentWidget?.context.path ?? notebookPath,
         cellCount,
         activeCellId,
         activeCellType,
@@ -444,7 +478,8 @@ function registerGetNotebookInfoCommand(
 function registerGetCellInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
-  notebookTracker?: INotebookTracker
+  notebookTracker?: INotebookTracker,
+  serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-cell-info',
@@ -468,28 +503,49 @@ function registerGetCellInfoCommand(
           background: {
             type: 'boolean',
             description: BACKGROUND_DESCRIPTION
+          },
+          createWidget: {
+            type: 'boolean',
+            description:
+              'Whether to open the Notebook widget if it is not opened. Default to false to avoid unnecessary disruption'
           }
         }
       }
     },
-    execute: (args: any) => {
-      const { notebookPath, cellId, background } = args;
+    execute: async (args: any) => {
+      const { notebookPath, cellId, background, createWidget } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
-        background
+        background,
+        // Create the Notebook widget if explicitly requested or if the service manager is not available.
+        (createWidget ?? false) || !serviceManager
       );
+      let context = currentWidget?.context;
       if (!currentWidget) {
-        throw new Error(
-          notebookPath
-            ? `Failed to open notebook at path: ${notebookPath}`
-            : 'No active notebook and no notebook path provided'
-        );
+        if (createWidget) {
+          throw new Error(
+            notebookPath
+              ? `Failed to open notebook at path: ${notebookPath}`
+              : 'No active notebook and no notebook path provided'
+          );
+        } else if (serviceManager) {
+          context = await getNotebookContext(serviceManager, notebookPath);
+        } else {
+          throw new Error(
+            `Failed to get the content of ${notebookPath}, the service manager is not available`
+          );
+        }
       }
 
-      const { cell } = getCellTarget(currentWidget, cellId);
+      if (!context) {
+        throw new Error(`Failed to get the context of ${notebookPath}`);
+      }
+
+      const model = context.model;
+      const { cell } = getCellTarget(model, cellId, currentWidget);
       const cellType = cell.type;
       const sharedModel = cell.sharedModel;
       const source = sharedModel.getSource();
@@ -563,7 +619,7 @@ function registerSetCellContentCommand(
         required: ['content']
       }
     },
-    execute: (args: any) => {
+    execute: async (args: any) => {
       const {
         notebookPath,
         cellId,
@@ -573,7 +629,7 @@ function registerSetCellContentCommand(
         diffMode = 'unified'
       } = args;
 
-      const notebookWidget = getNotebookWidget(
+      const notebookWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
@@ -588,7 +644,11 @@ function registerSetCellContentCommand(
       }
 
       const targetNotebookPath = notebookWidget.context.path;
-      const { cell: targetCell } = getCellTarget(notebookWidget, cellId);
+      const { cell: targetCell } = getCellTarget(
+        notebookWidget.context.model,
+        cellId,
+        notebookWidget
+      );
 
       const sharedModel = targetCell.sharedModel;
       const previousContent = sharedModel.getSource();
@@ -674,7 +734,7 @@ function registerRunCellCommand(
     execute: async (args: any) => {
       const { notebookPath, cellId, background, recordTiming = true } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
@@ -689,10 +749,11 @@ function registerRunCellCommand(
       }
 
       const notebook = currentWidget.content;
-      const model = getNotebookModel(currentWidget);
+      const model = currentWidget.context.model;
       const { cellIndex: targetCellIndex } = getCellTarget(
-        currentWidget,
-        cellId
+        model,
+        cellId,
+        currentWidget
       );
       const cellWidget = notebook.widgets[targetCellIndex];
       if (!cellWidget) {
@@ -849,10 +910,10 @@ function registerDeleteCellCommand(
         required: ['cellId']
       }
     },
-    execute: (args: any) => {
+    execute: async (args: any) => {
       const { notebookPath, cellId, background } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
@@ -866,10 +927,11 @@ function registerDeleteCellCommand(
         );
       }
 
-      const model = getNotebookModel(currentWidget);
+      const model = currentWidget.context.model;
       const { cellIndex: targetCellIndex } = getCellTarget(
-        currentWidget,
-        cellId
+        model,
+        cellId,
+        currentWidget
       );
 
       model.sharedModel.deleteCell(targetCellIndex);
@@ -917,7 +979,7 @@ function registerSaveNotebookCommand(
     execute: async (args: any) => {
       const { notebookPath, background } = args;
 
-      const currentWidget = getNotebookWidget(
+      const currentWidget = await getNotebookWidget(
         notebookPath,
         docManager,
         notebookTracker,
@@ -951,7 +1013,7 @@ function registerSaveNotebookCommand(
 export interface IRegisterNotebookCommandsOptions {
   commands: CommandRegistry;
   docManager: IDocumentManager;
-  kernelSpecManager: KernelSpec.IManager;
+  serviceManager: ServiceManager.IManager;
   notebookTracker?: INotebookTracker;
 }
 
@@ -961,12 +1023,26 @@ export interface IRegisterNotebookCommandsOptions {
 export function registerNotebookCommands(
   options: IRegisterNotebookCommandsOptions
 ): void {
-  const { commands, docManager, kernelSpecManager, notebookTracker } = options;
+  const { commands, docManager, serviceManager, notebookTracker } = options;
 
-  registerCreateNotebookCommand(commands, docManager, kernelSpecManager);
+  registerCreateNotebookCommand(
+    commands,
+    docManager,
+    serviceManager.kernelspecs
+  );
   registerAddCellCommand(commands, docManager, notebookTracker);
-  registerGetNotebookInfoCommand(commands, docManager, notebookTracker);
-  registerGetCellInfoCommand(commands, docManager, notebookTracker);
+  registerGetNotebookInfoCommand(
+    commands,
+    docManager,
+    notebookTracker,
+    serviceManager
+  );
+  registerGetCellInfoCommand(
+    commands,
+    docManager,
+    notebookTracker,
+    serviceManager
+  );
   registerSetCellContentCommand(commands, docManager, notebookTracker);
   registerRunCellCommand(commands, docManager, notebookTracker);
   registerDeleteCellCommand(commands, docManager, notebookTracker);
