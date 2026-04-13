@@ -445,6 +445,7 @@ function registerGetNotebookInfoCommand(
       const activeCell = notebook?.activeCell;
       const activeCellId = activeCell?.model.id || null;
       const activeCellType = activeCell?.model.type || 'unknown';
+      const isDirty = model.dirty;
       const cells = Array.from({ length: cellCount }, (_, index) => {
         const cell = model.cells.get(index);
 
@@ -454,6 +455,11 @@ function registerGetNotebookInfoCommand(
         };
       });
       const notebookMetadata = model.metadata;
+
+      if (!currentWidget) {
+        context.dispose();
+      }
+
       return {
         success: true,
         notebookName:
@@ -464,7 +470,7 @@ function registerGetNotebookInfoCommand(
         activeCellType,
         cells,
         notebookMetadata,
-        isDirty: model.dirty
+        isDirty
       };
     }
   };
@@ -554,6 +560,10 @@ function registerGetCellInfoCommand(
       if (cellType === 'code') {
         const rawOutputs = sharedModel.toJSON().outputs;
         outputs = Array.isArray(rawOutputs) ? rawOutputs : [];
+      }
+
+      if (!currentWidget) {
+        context.dispose();
       }
 
       return {

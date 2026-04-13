@@ -573,6 +573,12 @@ function registerGetFileInfoCommand(
       const resolvedFilePath = widget?.context.path ?? filePath;
       const fileName = widget?.title.label ?? PathExt.basename(filePath);
       const fileExtension = PathExt.extname(resolvedFilePath) || 'unknown';
+      const isDirty = model.dirty;
+      const readOnly = model.readOnly;
+
+      if (!widget) {
+        context.dispose();
+      }
 
       return {
         success: true,
@@ -580,8 +586,8 @@ function registerGetFileInfoCommand(
         fileName,
         fileExtension,
         content,
-        isDirty: model.dirty,
-        readOnly: model.readOnly,
+        isDirty,
+        readOnly,
         widgetType: widget?.constructor.name
       };
     }
