@@ -425,11 +425,13 @@ function registerGetNotebookInfoCommand(
               ? `Failed to open notebook at path: ${notebookPath}`
               : 'No active notebook and no notebook path provided'
           );
-        } else if (serviceManager) {
+        } else if (serviceManager && notebookPath) {
           context = await getNotebookContext(serviceManager, notebookPath);
         } else {
           throw new Error(
-            `Failed to get the content of ${notebookPath}, the service manager is not available`
+            notebookPath
+              ? `Failed to get the content of ${notebookPath}, the service manager is not available`
+              : 'No active notebook and no notebook path provided'
           );
         }
       }
@@ -537,11 +539,13 @@ function registerGetCellInfoCommand(
               ? `Failed to open notebook at path: ${notebookPath}`
               : 'No active notebook and no notebook path provided'
           );
-        } else if (serviceManager) {
+        } else if (serviceManager && notebookPath) {
           context = await getNotebookContext(serviceManager, notebookPath);
         } else {
           throw new Error(
-            `Failed to get the content of ${notebookPath}, the service manager is not available`
+            notebookPath
+              ? `Failed to get the content of ${notebookPath}, the service manager is not available`
+              : 'No active notebook and no notebook path provided'
           );
         }
       }
