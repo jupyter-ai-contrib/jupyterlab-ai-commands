@@ -524,7 +524,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jupyter/ydoc@npm:^3.1.0":
+"@jupyter/ydoc@npm:^3.1.0, @jupyter/ydoc@npm:^3.1.0 || ^4.0.0":
   version: 3.1.0
   resolution: "@jupyter/ydoc@npm:3.1.0"
   dependencies:
@@ -4165,7 +4165,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jupyterlab-ai-commands@workspace:."
   dependencies:
-    "@jupyter/ydoc": ^3.1.0
+    "@jupyter/ydoc": ^3.1.0 || ^4.0.0
     "@jupyterlab/application": ^4.0.0
     "@jupyterlab/apputils": ^4.0.0
     "@jupyterlab/builder": ^4.0.0
