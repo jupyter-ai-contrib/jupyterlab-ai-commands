@@ -23,7 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "jupyterlab-diff >=0.7.0,<0.8",
+    "jupyterlab-diff >=0.6.0,<0.8",
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
