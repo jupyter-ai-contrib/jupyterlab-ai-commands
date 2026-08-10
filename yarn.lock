@@ -479,13 +479,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jupyter/builder@npm:^1.1.2":
-  version: 1.2.1
-  resolution: "@jupyter/builder@npm:1.2.1"
+"@jupyter/builder@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@jupyter/builder@npm:1.2.2"
   dependencies:
     "@jupyterlab/core-meta": ^4.6.1
     "@module-federation/runtime-tools": ^2.0.0
-    "@rspack/core": ^2.1.2
+    "@rspack/core": ^2.1.7
     ajv: ^8.12.0
     commander: ^9.4.1
     css-loader: ^7.1.4
@@ -499,7 +499,7 @@ __metadata:
     style-loader: ^4.0.0
     supports-color: ^7.2.0
     webpack-merge: ^5.8.0
-  checksum: 7fad38b4f86d83e2b412b171fd8307f9601fc704a6c1ee63e2676eb052c772218a37da3c53bf1157011ab613dad92ed3bb67970b0dff757b8fe575f00e5b30c2
+  checksum: 057d7622351fc4206bcf74d0a455c10d14be64bb6dd9ca1cca79deaf22782dbc1b94a0498a0f31228f01509215f8ee1381e68cb5da19007f4df1987f67da2cbe
   languageName: node
   linkType: hard
 
@@ -1753,7 +1753,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rspack/core@npm:^2.1.2":
+"@rspack/core@npm:^2.1.7":
   version: 2.1.8
   resolution: "@rspack/core@npm:2.1.8"
   dependencies:
@@ -3961,7 +3961,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jupyterlab-ai-commands@workspace:."
   dependencies:
-    "@jupyter/builder": ^1.1.2
+    "@jupyter/builder": ^1.2.2
     "@jupyter/ydoc": ^3.1.0 || ^4.0.0
     "@jupyterlab/application": ^4.0.0
     "@jupyterlab/apputils": ^4.0.0
