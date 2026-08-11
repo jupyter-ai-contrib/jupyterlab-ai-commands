@@ -67,7 +67,7 @@
         "@lumino/commands": "^2.0.0"
     },
     "devDependencies": {
-        "@jupyter/builder": "^1.0.2",
+        "@jupyter/builder": "^1.2.2",
         "@types/json-schema": "^7.0.11",
         "@types/react": "^18.0.26",
         "@types/react-addons-linked-state-mixin": "^0.14.22",
@@ -195,5 +195,6 @@
             "selector-no-vendor-prefix": null,
             "value-no-vendor-prefix": null
         }
-    }
+    },
+    "packageManager": "yarn@3.5.0"
 }
