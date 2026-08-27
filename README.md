@@ -94,6 +94,10 @@ This extension provides the following commands for AI-assisted interactions with
   - Arguments:
     - `notebookPath` (string, optional): Path to the notebook file. If not provided, uses the currently active notebook
 
+- **`jupyterlab-ai-commands:get-notebook-content`** - Get the full notebook content as an nbformat JSON object, read from the live in-browser model (reflects unsaved edits)
+  - Arguments:
+    - `notebookPath` (string, optional): Path to the notebook file. If not provided, uses the currently active notebook
+
 - **`jupyterlab-ai-commands:get-cell-info`** - Get information about a specific cell including its type, source content, and outputs
   - Arguments:
     - `notebookPath` (string, optional): Path to the notebook file. If not provided, uses the currently active notebook

@@ -481,6 +481,101 @@ function registerGetNotebookInfoCommand(
 }
 
 /**
+ * Get the full content of a notebook as an nbformat JSON object, read from the
+ * live in-browser model (not from disk). This lets server-side tools read a
+ * notebook's current, possibly-unsaved, content when no RTC provider is active.
+ */
+function registerGetNotebookContentCommand(
+  commands: CommandRegistry,
+  docManager: IDocumentManager,
+  notebookTracker?: INotebookTracker,
+  serviceManager?: ServiceManager.IManager
+): void {
+  const command = {
+    id: 'jupyterlab-ai-commands:get-notebook-content',
+    label: 'Get Notebook Content',
+    caption:
+      'Get the full notebook content as nbformat JSON, read from the live model',
+    describedBy: {
+      args: {
+        type: 'object',
+        properties: {
+          notebookPath: {
+            type: 'string',
+            description:
+              'Path to the notebook file. If not provided, uses the currently active notebook'
+          },
+          background: {
+            type: 'boolean',
+            description: BACKGROUND_DESCRIPTION
+          },
+          createWidget: {
+            type: 'boolean',
+            description:
+              'Whether to open the Notebook widget if it is not opened. Default to false to avoid unnecessary disruption'
+          }
+        }
+      }
+    },
+    execute: async (args: any) => {
+      const { notebookPath, background, createWidget } = args;
+
+      const currentWidget = await getNotebookWidget(
+        notebookPath,
+        docManager,
+        notebookTracker,
+        background,
+        // Create the Notebook widget if explicitly requested or if the service manager is not available.
+        (createWidget ?? false) || !serviceManager
+      );
+      let context = currentWidget?.context;
+      if (!currentWidget) {
+        if (createWidget) {
+          throw new Error(
+            notebookPath
+              ? `Failed to open notebook at path: ${notebookPath}`
+              : 'No active notebook and no notebook path provided'
+          );
+        } else if (serviceManager && notebookPath) {
+          context = await getNotebookContext(serviceManager, notebookPath);
+        } else {
+          throw new Error(
+            notebookPath
+              ? `Failed to get the content of ${notebookPath}, the service manager is not available`
+              : 'No active notebook and no notebook path provided'
+          );
+        }
+      }
+
+      if (!context) {
+        throw new Error(`Failed to get the context of ${notebookPath}`);
+      }
+
+      const model = context.model;
+      // sharedModel.toJSON() returns the full nbformat notebook, reflecting
+      // any live edits that have not yet been saved to disk.
+      const content = model.sharedModel.toJSON();
+      const isDirty = model.dirty;
+
+      if (!currentWidget) {
+        context.dispose();
+      }
+
+      return {
+        success: true,
+        notebookName:
+          currentWidget?.title.label ?? PathExt.basename(notebookPath),
+        notebookPath: currentWidget?.context.path ?? notebookPath,
+        content,
+        isDirty
+      };
+    }
+  };
+
+  commands.addCommand(command.id, command);
+}
+
+/**
  * Get information about a specific cell including its type, source content, and outputs
  */
 function registerGetCellInfoCommand(
@@ -1046,6 +1141,12 @@ export function registerNotebookCommands(
   );
   registerAddCellCommand(commands, docManager, notebookTracker);
   registerGetNotebookInfoCommand(
+    commands,
+    docManager,
+    notebookTracker,
+    serviceManager
+  );
+  registerGetNotebookContentCommand(
     commands,
     docManager,
     notebookTracker,

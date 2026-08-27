@@ -8,6 +8,7 @@ const COMMANDS = {
   createNotebook: 'jupyterlab-ai-commands:create-notebook',
   deleteCell: 'jupyterlab-ai-commands:delete-cell',
   getCellInfo: 'jupyterlab-ai-commands:get-cell-info',
+  getNotebookContent: 'jupyterlab-ai-commands:get-notebook-content',
   getNotebookInfo: 'jupyterlab-ai-commands:get-notebook-info',
   runCell: 'jupyterlab-ai-commands:run-cell',
   saveNotebook: 'jupyterlab-ai-commands:save-notebook',
@@ -277,6 +278,53 @@ test.describe('Notebook Commands', () => {
     expect(output).not.toBeNull();
     expect(output?.[0].trim()).toBe('alpha');
   });
+
+  test('should return full live notebook content reflecting unsaved edits', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/command-get-notebook-content.ipynb`;
+
+    await executeCommand(page, COMMANDS.createNotebook, {
+      language: 'python',
+      name: notebookPath
+    });
+    const codeCell = await executeCommand(page, COMMANDS.addCell, {
+      content: 'x = 1',
+      notebookPath
+    });
+    await executeCommand(page, COMMANDS.addCell, {
+      cellType: 'markdown',
+      content: '# Heading',
+      notebookPath
+    });
+
+    // Edit a cell but do NOT save: get-notebook-content must reflect the live
+    // (unsaved) model, which is the whole point of the command.
+    await executeCommand(page, COMMANDS.setCellContent, {
+      cellId: codeCell.cellId,
+      content: 'x = 999',
+      notebookPath,
+      showDiff: false
+    });
+
+    const res = await executeCommand(page, COMMANDS.getNotebookContent, {
+      notebookPath
+    });
+    expect(res.success).toBe(true);
+    expect(res.notebookPath).toBe(notebookPath);
+    expect(res.isDirty).toBe(true);
+
+    const content = res.content;
+    expect(content).toHaveProperty('nbformat');
+    expect(content.cells).toHaveLength(2);
+    const sources = content.cells.map((cell: any) =>
+      Array.isArray(cell.source) ? cell.source.join('') : cell.source
+    );
+    expect(sources).toContain('x = 999');
+    expect(sources).toContain('# Heading');
+    expect(sources).not.toContain('x = 1');
+  });
 });
 
 test.describe('Opening Notebook widget', () => {
@@ -319,6 +367,25 @@ test.describe('Opening Notebook widget', () => {
     expect(cellInfo.success).toBe(true);
     expect(cellInfo.cellId).toBe(cellId);
     expect(cellInfo.cellType).toBe('markdown');
+    expect(page.activity.getTabLocator(notebookName)).toHaveCount(0);
+  });
+
+  test('Should get notebook content without opening the widget', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/${notebookName}`;
+
+    const res = await executeCommand(page, COMMANDS.getNotebookContent, {
+      notebookPath
+    });
+    expect(res.success).toBe(true);
+    expect(res.notebookPath).toBe(notebookPath);
+    expect(res.content.cells).toHaveLength(1);
+    const source = Array.isArray(res.content.cells[0].source)
+      ? res.content.cells[0].source.join('')
+      : res.content.cells[0].source;
+    expect(source).toContain('# Title');
     expect(page.activity.getTabLocator(notebookName)).toHaveCount(0);
   });
 
