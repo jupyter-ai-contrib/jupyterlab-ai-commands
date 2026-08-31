@@ -64,6 +64,7 @@
         "@jupyterlab/notebook": "^4.0.0",
         "@jupyterlab/services": "^7.0.0",
         "@jupyterlab/settingregistry": "^4.0.0",
+        "@jupyterlab/translation": "^4.0.0",
         "@lumino/commands": "^2.0.0"
     },
     "devDependencies": {

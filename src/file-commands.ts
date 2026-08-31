@@ -8,6 +8,7 @@ import {
 } from '@jupyterlab/docregistry';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
 import { ServiceManager } from '@jupyterlab/services';
+import { TranslationBundle } from '@jupyterlab/translation';
 import { CommandRegistry } from '@lumino/commands';
 
 /**
@@ -69,12 +70,13 @@ async function getDocumentContext(
  */
 function registerCreateFileCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:create-file',
-    label: 'Create File',
-    caption: 'Create a new file of specified type',
+    label: trans.__('Create File'),
+    caption: trans.__('Create a new file of specified type'),
     describedBy: {
       args: {
         type: 'object',
@@ -160,7 +162,11 @@ function registerCreateFileCommand(
 
       return {
         success: true,
-        message: `${registeredFileType.name} file '${fullFileName}' created and opened successfully`,
+        message: trans.__(
+          "%1 file '%2' created and opened successfully",
+          registeredFileType.name,
+          fullFileName
+        ),
         fileName: fullFileName,
         filePath: finalPath,
         fileType: registeredFileType.name,
@@ -178,12 +184,13 @@ function registerCreateFileCommand(
  */
 function registerOpenFileCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:open-file',
-    label: 'Open File',
-    caption: 'Open a file in the editor',
+    label: trans.__('Open File'),
+    caption: trans.__('Open a file in the editor'),
     describedBy: {
       args: {
         type: 'object',
@@ -218,7 +225,7 @@ function registerOpenFileCommand(
 
       return {
         success: true,
-        message: `File '${filePath}' opened successfully`,
+        message: trans.__("File '%1' opened successfully", filePath),
         filePath,
         widgetId: widget.id
       };
@@ -233,12 +240,13 @@ function registerOpenFileCommand(
  */
 function registerDeleteFileCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:delete-file',
-    label: 'Delete File',
-    caption: 'Delete a file from the file system',
+    label: trans.__('Delete File'),
+    caption: trans.__('Delete a file from the file system'),
     describedBy: {
       args: {
         type: 'object',
@@ -258,7 +266,7 @@ function registerDeleteFileCommand(
 
       return {
         success: true,
-        message: `File '${filePath}' deleted successfully`,
+        message: trans.__("File '%1' deleted successfully", filePath),
         filePath
       };
     }
@@ -272,12 +280,13 @@ function registerDeleteFileCommand(
  */
 function registerRenameFileCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:rename-file',
-    label: 'Rename File',
-    caption: 'Rename a file or move it to a different location',
+    label: trans.__('Rename File'),
+    caption: trans.__('Rename a file or move it to a different location'),
     describedBy: {
       args: {
         type: 'object',
@@ -301,7 +310,11 @@ function registerRenameFileCommand(
 
       return {
         success: true,
-        message: `File renamed from '${oldPath}' to '${newPath}' successfully`,
+        message: trans.__(
+          "File renamed from '%1' to '%2' successfully",
+          oldPath,
+          newPath
+        ),
         oldPath,
         newPath
       };
@@ -316,12 +329,13 @@ function registerRenameFileCommand(
  */
 function registerCopyFileCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:copy-file',
-    label: 'Copy File',
-    caption: 'Copy a file to a new location',
+    label: trans.__('Copy File'),
+    caption: trans.__('Copy a file to a new location'),
     describedBy: {
       args: {
         type: 'object',
@@ -358,7 +372,11 @@ function registerCopyFileCommand(
 
       return {
         success: true,
-        message: `File copied from '${sourcePath}' to '${finalPath}' successfully`,
+        message: trans.__(
+          "File copied from '%1' to '%2' successfully",
+          sourcePath,
+          finalPath
+        ),
         sourcePath,
         destinationPath: finalPath
       };
@@ -371,11 +389,14 @@ function registerCopyFileCommand(
 /**
  * Navigate to a specific directory in the file browser
  */
-function registerNavigateToDirectoryCommand(commands: CommandRegistry): void {
+function registerNavigateToDirectoryCommand(
+  commands: CommandRegistry,
+  trans: TranslationBundle
+): void {
   const command = {
     id: 'jupyterlab-ai-commands:navigate-to-directory',
-    label: 'Navigate to Directory',
-    caption: 'Navigate to a specific directory in the file browser',
+    label: trans.__('Navigate to Directory'),
+    caption: trans.__('Navigate to a specific directory in the file browser'),
     describedBy: {
       args: {
         type: 'object',
@@ -397,7 +418,7 @@ function registerNavigateToDirectoryCommand(commands: CommandRegistry): void {
 
       return {
         success: true,
-        message: `Navigated to directory '${path}' successfully`,
+        message: trans.__("Navigated to directory '%1' successfully", path),
         path
       };
     }
@@ -411,12 +432,13 @@ function registerNavigateToDirectoryCommand(commands: CommandRegistry): void {
  */
 function registerListDirectoryCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:list-directory',
-    label: 'List Directory',
-    caption: 'List files and directories in a specific directory',
+    label: trans.__('List Directory'),
+    caption: trans.__('List files and directories in a specific directory'),
     describedBy: {
       args: {
         type: 'object',
@@ -469,7 +491,11 @@ function registerListDirectoryCommand(
 
       return {
         success: true,
-        message: `Listed ${formattedItems.length} items in directory '${path || '/'}'`,
+        message: trans.__(
+          "Listed %1 items in directory '%2'",
+          formattedItems.length,
+          path || '/'
+        ),
         path: path || '/',
         totalItems: formattedItems.length,
         directories: directories.length,
@@ -489,13 +515,14 @@ function registerListDirectoryCommand(
 function registerGetFileInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   editorTracker?: IEditorTracker,
   serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-file-info',
-    label: 'Get File Info',
-    caption: 'Get information about a file including its content',
+    label: trans.__('Get File Info'),
+    caption: trans.__('Get information about a file including its content'),
     describedBy: {
       args: {
         type: 'object',
@@ -601,12 +628,13 @@ function registerGetFileInfoCommand(
  */
 function registerSetFileContentCommand(
   commands: CommandRegistry,
-  docManager: IDocumentManager
+  docManager: IDocumentManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:set-file-content',
-    label: 'Set File Content',
-    caption: 'Set or update the content of an existing file',
+    label: trans.__('Set File Content'),
+    caption: trans.__('Set or update the content of an existing file'),
     describedBy: {
       args: {
         type: 'object',
@@ -702,6 +730,7 @@ function registerSetFileContentCommand(
 export interface IRegisterFileCommandsOptions {
   commands: CommandRegistry;
   docManager: IDocumentManager;
+  trans: TranslationBundle;
   editorTracker?: IEditorTracker;
   serviceManager?: ServiceManager.IManager;
 }
@@ -712,20 +741,22 @@ export interface IRegisterFileCommandsOptions {
 export function registerFileCommands(
   options: IRegisterFileCommandsOptions
 ): void {
-  const { commands, docManager, editorTracker, serviceManager } = options;
+  const { commands, docManager, trans, editorTracker, serviceManager } =
+    options;
 
-  registerCreateFileCommand(commands, docManager);
-  registerOpenFileCommand(commands, docManager);
-  registerDeleteFileCommand(commands, docManager);
-  registerRenameFileCommand(commands, docManager);
-  registerCopyFileCommand(commands, docManager);
-  registerNavigateToDirectoryCommand(commands);
-  registerListDirectoryCommand(commands, docManager);
+  registerCreateFileCommand(commands, docManager, trans);
+  registerOpenFileCommand(commands, docManager, trans);
+  registerDeleteFileCommand(commands, docManager, trans);
+  registerRenameFileCommand(commands, docManager, trans);
+  registerCopyFileCommand(commands, docManager, trans);
+  registerNavigateToDirectoryCommand(commands, trans);
+  registerListDirectoryCommand(commands, docManager, trans);
   registerGetFileInfoCommand(
     commands,
     docManager,
+    trans,
     editorTracker,
     serviceManager
   );
-  registerSetFileContentCommand(commands, docManager);
+  registerSetFileContentCommand(commands, docManager, trans);
 }
