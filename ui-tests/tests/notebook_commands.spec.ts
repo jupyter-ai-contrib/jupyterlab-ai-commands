@@ -135,6 +135,61 @@ test.describe('Notebook Commands', () => {
     await expectCellInputToContainText(page, 3, 'third = 3');
   });
 
+  test('should report when add-cell replaces the only empty cell', async ({
+    page,
+    tmpPath
+  }) => {
+    const notebookPath = `${tmpPath}/command-add-cell-replace-empty.ipynb`;
+
+    await executeCommand(page, COMMANDS.createNotebook, {
+      language: 'python',
+      name: notebookPath
+    });
+
+    const initialInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath
+    });
+    expect(initialInfo.cellCount).toBe(1);
+    const emptyCellId = initialInfo.cells[0].cellId;
+
+    const markdownCell = await executeCommand(page, COMMANDS.addCell, {
+      referenceCellId: emptyCellId,
+      cellType: 'markdown',
+      content: '# Replaced',
+      notebookPath,
+      position: 'below'
+    });
+    expect(markdownCell.success).toBe(true);
+    expect(markdownCell.replacedCellId).toBe(emptyCellId);
+    expect(markdownCell.position).toBe('replaced');
+    expect(markdownCell.message).toContain(emptyCellId);
+    expect(markdownCell.cellId).not.toBe(emptyCellId);
+
+    const notebookInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath
+    });
+    expect(notebookInfo.cells).toEqual([
+      { cellId: markdownCell.cellId, cellType: 'markdown' }
+    ]);
+    await expectCellInputToContainText(page, 0, 'Replaced');
+    await expect(
+      executeCommand(page, COMMANDS.getCellInfo, {
+        cellId: emptyCellId,
+        notebookPath
+      })
+    ).rejects.toThrow(`Cell with ID '${emptyCellId}' not found in notebook`);
+
+    const codeCell = await executeCommand(page, COMMANDS.addCell, {
+      referenceCellId: markdownCell.cellId,
+      content: 'x = 1',
+      notebookPath,
+      position: 'below'
+    });
+    expect(codeCell.replacedCellId).toBeUndefined();
+    expect(codeCell.position).toBe('below');
+    expect(await page.notebook.getCellCount()).toBe(2);
+  });
+
   test('should add cells below in correct order without referenceCellId', async ({
     page,
     tmpPath

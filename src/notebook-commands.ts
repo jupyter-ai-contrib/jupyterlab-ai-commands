@@ -239,10 +239,13 @@ function registerAddCellCommand(
   const command = {
     id: 'jupyterlab-ai-commands:add-cell',
     label: 'Add Cell',
-    caption: 'Add a cell to the current notebook with optional content',
+    caption:
+      'Add a cell to the current notebook with optional content. If the notebook only has one empty cell, the new cell replaces it',
     describedBy: {
       args: {
         type: 'object',
+        description:
+          'If the notebook only has one cell and that cell is empty, the new cell replaces it, even when it is the reference cell. The result then has replacedCellId set to the ID of the removed cell and position set to "replaced". The removed cell ID no longer exists: use the returned cellId for later commands.',
         properties: {
           notebookPath: {
             type: 'string',
@@ -266,7 +269,7 @@ function registerAddCellCommand(
           position: {
             type: 'string',
             description:
-              'Position relative to the reference or active cell (above or below)',
+              'Position relative to the reference or active cell (above or below). Ignored when the new cell replaces the only empty cell',
             enum: [...CELL_POSITION_VALUES]
           },
           background: {
@@ -320,7 +323,9 @@ function registerAddCellCommand(
         model.cells.get(0).sharedModel.getSource().trim() === '';
 
       let insertIndex = model.cells.length;
+      let replacedCellId: string | undefined;
       if (shouldReplaceFirstCell) {
+        replacedCellId = model.cells.get(0).id;
         model.sharedModel.deleteCell(0);
         insertIndex = 0;
       } else if (model.cells.length > 0) {
@@ -359,11 +364,14 @@ function registerAddCellCommand(
 
       return {
         success: true,
-        message: `${cellType} cell added successfully`,
+        message: replacedCellId
+          ? `${cellType} cell added successfully. It replaced the empty cell '${replacedCellId}', which no longer exists`
+          : `${cellType} cell added successfully`,
         cellId: newCell.id,
         content: content || '',
         cellType,
-        position
+        position: replacedCellId ? 'replaced' : position,
+        replacedCellId
       };
     }
   };
