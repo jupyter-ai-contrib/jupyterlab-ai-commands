@@ -7,6 +7,7 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
 import { registerFileCommands } from './file-commands';
 import { registerKernelCommands } from './kernel-commands';
@@ -20,21 +21,25 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description: 'A set of commands for AI in JupyterLab',
   autoStart: true,
   requires: [IDocumentManager],
-  optional: [IEditorTracker, INotebookTracker, ISettingRegistry],
+  optional: [IEditorTracker, INotebookTracker, ISettingRegistry, ITranslator],
   activate: (
     app: JupyterFrontEnd,
     docManager: IDocumentManager,
     editorTracker?: IEditorTracker,
     notebookTracker?: INotebookTracker,
-    settingRegistry?: ISettingRegistry
+    settingRegistry?: ISettingRegistry,
+    translator?: ITranslator
   ) => {
     console.log('JupyterLab extension jupyterlab-ai-commands is activated!');
 
     const { commands, serviceManager } = app;
 
+    const trans = (translator ?? nullTranslator).load('jupyterlab_ai_commands');
+
     registerFileCommands({
       commands,
       docManager,
+      trans,
       editorTracker,
       serviceManager
     });
@@ -43,14 +48,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
       commands,
       docManager,
       serviceManager,
-      notebookTracker
+      notebookTracker,
+      trans
     });
 
     const kernelManager = app.serviceManager.kernels;
     registerKernelCommands({
       commands,
       kernelManager,
-      kernelSpecManager: serviceManager.kernelspecs
+      kernelSpecManager: serviceManager.kernelspecs,
+      trans
     });
 
     if (settingRegistry) {

@@ -1,5 +1,6 @@
 import { Kernel, KernelMessage, KernelSpec } from '@jupyterlab/services';
 import * as nbformat from '@jupyterlab/nbformat';
+import { TranslationBundle } from '@jupyterlab/translation';
 import { CommandRegistry } from '@lumino/commands';
 
 import { findKernelByLanguage } from './kernel-utils';
@@ -48,12 +49,15 @@ interface IKernelExecutionResult {
 function registerStartKernelCommand(
   commands: CommandRegistry,
   kernelManager: Kernel.IManager,
-  kernelSpecManager: KernelSpec.IManager
+  kernelSpecManager: KernelSpec.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:start-kernel',
-    label: 'Start Kernel',
-    caption: 'Start a new kernel with the specified language or kernel name',
+    label: trans.__('Start Kernel'),
+    caption: trans.__(
+      'Start a new kernel with the specified language or kernel name'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -103,7 +107,7 @@ function registerStartKernelCommand(
 
       return {
         success: true,
-        message: 'Kernel started successfully',
+        message: trans.__('Kernel started successfully'),
         kernelId: kernel.id,
         kernelName: kernel.name,
         status: kernel.status
@@ -119,12 +123,15 @@ function registerStartKernelCommand(
  */
 function registerExecuteInKernelCommand(
   commands: CommandRegistry,
-  kernelManager: Kernel.IManager
+  kernelManager: Kernel.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:execute-in-kernel',
-    label: 'Execute in Kernel',
-    caption: 'Execute code in a running kernel and return the outputs',
+    label: trans.__('Execute in Kernel'),
+    caption: trans.__(
+      'Execute code in a running kernel and return the outputs'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -314,10 +321,10 @@ function registerExecuteInKernelCommand(
         outputs,
         message:
           status === 'ok'
-            ? 'Kernel execution completed successfully'
+            ? trans.__('Kernel execution completed successfully')
             : status === 'abort'
-              ? 'Kernel execution was aborted'
-              : 'Kernel execution failed',
+              ? trans.__('Kernel execution was aborted')
+              : trans.__('Kernel execution failed'),
         kernelId,
         outputCount: outputs.length
       };
@@ -340,12 +347,13 @@ function registerExecuteInKernelCommand(
  */
 function registerShutdownKernelCommand(
   commands: CommandRegistry,
-  kernelManager: Kernel.IManager
+  kernelManager: Kernel.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:shutdown-kernel',
-    label: 'Shutdown Kernel',
-    caption: 'Shutdown a running kernel by ID',
+    label: trans.__('Shutdown Kernel'),
+    caption: trans.__('Shutdown a running kernel by ID'),
     describedBy: {
       args: {
         type: 'object',
@@ -370,7 +378,7 @@ function registerShutdownKernelCommand(
 
       return {
         success: true,
-        message: `Kernel ${kernelId} shutdown successfully`,
+        message: trans.__('Kernel %1 shutdown successfully', kernelId),
         kernelId
       };
     }
@@ -384,12 +392,13 @@ function registerShutdownKernelCommand(
  */
 function registerListKernelsCommand(
   commands: CommandRegistry,
-  kernelManager: Kernel.IManager
+  kernelManager: Kernel.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:list-kernels',
-    label: 'List Kernels',
-    caption: 'List all running kernels',
+    label: trans.__('List Kernels'),
+    caption: trans.__('List all running kernels'),
     describedBy: {
       args: {
         type: 'object',
@@ -427,12 +436,13 @@ function registerListKernelsCommand(
  */
 function registerListKernelSpecsCommand(
   commands: CommandRegistry,
-  kernelSpecManager: KernelSpec.IManager
+  kernelSpecManager: KernelSpec.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:list-kernelspecs',
-    label: 'List Kernel Specs',
-    caption: 'List all available kernel specs',
+    label: trans.__('List Kernel Specs'),
+    caption: trans.__('List all available kernel specs'),
     describedBy: {
       args: {
         type: 'object',
@@ -483,6 +493,7 @@ export interface IRegisterKernelCommandsOptions {
   commands: CommandRegistry;
   kernelManager: Kernel.IManager;
   kernelSpecManager: KernelSpec.IManager;
+  trans: TranslationBundle;
 }
 
 /**
@@ -491,11 +502,11 @@ export interface IRegisterKernelCommandsOptions {
 export function registerKernelCommands(
   options: IRegisterKernelCommandsOptions
 ): void {
-  const { commands, kernelManager, kernelSpecManager } = options;
+  const { commands, kernelManager, kernelSpecManager, trans } = options;
 
-  registerStartKernelCommand(commands, kernelManager, kernelSpecManager);
-  registerExecuteInKernelCommand(commands, kernelManager);
-  registerShutdownKernelCommand(commands, kernelManager);
-  registerListKernelsCommand(commands, kernelManager);
-  registerListKernelSpecsCommand(commands, kernelSpecManager);
+  registerStartKernelCommand(commands, kernelManager, kernelSpecManager, trans);
+  registerExecuteInKernelCommand(commands, kernelManager, trans);
+  registerShutdownKernelCommand(commands, kernelManager, trans);
+  registerListKernelsCommand(commands, kernelManager, trans);
+  registerListKernelSpecsCommand(commands, kernelSpecManager, trans);
 }

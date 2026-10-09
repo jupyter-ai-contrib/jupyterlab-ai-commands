@@ -16,6 +16,7 @@ import {
   NotebookPanel
 } from '@jupyterlab/notebook';
 import { KernelSpec, ServiceManager } from '@jupyterlab/services';
+import { TranslationBundle } from '@jupyterlab/translation';
 import { CommandRegistry } from '@lumino/commands';
 
 import { findKernelByLanguage } from './kernel-utils';
@@ -33,7 +34,7 @@ const VALID_CELL_POSITIONS = new Set(CELL_POSITION_VALUES);
 const BACKGROUND_DESCRIPTION =
   'Whether to avoid activating the Notebook widget so as not to disturb the user (default: true)';
 
-type CellExecutionStatus = 'ok' | 'error' | 'abort' | 'no-op';
+type CellExecutionStatus = 'ok' | 'error' | 'abort' | 'aborted' | 'no-op';
 
 function getCodeCellOutputs(cellModel: ICodeCellModel): nbformat.IOutput[] {
   return cellModel.toJSON().outputs ?? [];
@@ -142,13 +143,15 @@ function getCellTarget(
 function registerCreateNotebookCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
-  kernelSpecManager: KernelSpec.IManager
+  kernelSpecManager: KernelSpec.IManager,
+  trans: TranslationBundle
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:create-notebook',
-    label: 'Create Notebook',
-    caption:
-      'Create a new Jupyter notebook with a kernel for the specified language',
+    label: trans.__('Create Notebook'),
+    caption: trans.__(
+      'Create a new Jupyter notebook with a kernel for the specified language'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -216,7 +219,12 @@ function registerCreateNotebookCommand(
 
       return {
         success: true,
-        message: `Successfully created notebook ${fileName} with ${kernel} kernel${language ? ` for ${language}` : ''}`,
+        message: trans.__(
+          'Successfully created notebook %1 with %2 kernel%3',
+          fileName,
+          kernel,
+          language ? ` for ${language}` : ''
+        ),
         notebookPath: fileName,
         notebookName: fileName,
         kernel,
@@ -234,12 +242,15 @@ function registerCreateNotebookCommand(
 function registerAddCellCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:add-cell',
-    label: 'Add Cell',
-    caption: 'Add a cell to the current notebook with optional content',
+    label: trans.__('Add Cell'),
+    caption: trans.__(
+      'Add a cell to the current notebook with optional content'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -359,7 +370,7 @@ function registerAddCellCommand(
 
       return {
         success: true,
-        message: `${cellType} cell added successfully`,
+        message: trans.__('%1 cell added successfully', cellType),
         cellId: newCell.id,
         content: content || '',
         cellType,
@@ -377,14 +388,16 @@ function registerAddCellCommand(
 function registerGetNotebookInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker,
   serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-notebook-info',
-    label: 'Get Notebook Info',
-    caption:
-      'Get information about a notebook including cell IDs and the active cell ID',
+    label: trans.__('Get Notebook Info'),
+    caption: trans.__(
+      'Get information about a notebook including cell IDs and the active cell ID'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -581,14 +594,16 @@ function registerGetNotebookContentCommand(
 function registerGetCellInfoCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker,
   serviceManager?: ServiceManager.IManager
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:get-cell-info',
-    label: 'Get Cell Info',
-    caption:
-      'Get information about a specific cell including its type, source content, and outputs',
+    label: trans.__('Get Cell Info'),
+    caption: trans.__(
+      'Get information about a specific cell including its type, source content, and outputs'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -686,12 +701,13 @@ function registerGetCellInfoCommand(
 function registerSetCellContentCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:set-cell-content',
-    label: 'Set Cell Content',
-    caption: 'Set the content of a specific cell',
+    label: trans.__('Set Cell Content'),
+    caption: trans.__('Set the content of a specific cell'),
     describedBy: {
       args: {
         type: 'object',
@@ -787,8 +803,11 @@ function registerSetCellContentCommand(
         success: true,
         message:
           cellId !== undefined && cellId !== null
-            ? `Cell with ID '${cellId}' content replaced successfully`
-            : 'Active cell content replaced successfully',
+            ? trans.__(
+                "Cell with ID '%1' content replaced successfully",
+                cellId
+              )
+            : trans.__('Active cell content replaced successfully'),
         notebookPath: targetNotebookPath,
         cellId: retrievedCellId,
         previousContent,
@@ -809,12 +828,15 @@ function registerSetCellContentCommand(
 function registerRunCellCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:run-cell',
-    label: 'Run Cell',
-    caption: 'Run a specific cell in the notebook by nbformat cell ID',
+    label: trans.__('Run Cell'),
+    caption: trans.__(
+      'Run a specific cell in the notebook by nbformat cell ID'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -876,7 +898,10 @@ function registerRunCellCommand(
           return {
             success: true,
             status: 'no-op',
-            message: `Cell with ID '${cellId}' is empty, no execution needed`,
+            message: trans.__(
+              "Cell with ID '%1' is empty, no execution needed",
+              cellId
+            ),
             cellId,
             cellType: codeModel.type,
             executionCount: codeModel.executionCount,
@@ -892,7 +917,10 @@ function registerRunCellCommand(
           return {
             success: false,
             status: 'error',
-            message: `Cell with ID '${cellId}' cannot be executed without an active kernel`,
+            message: trans.__(
+              "Cell with ID '%1' cannot be executed without an active kernel",
+              cellId
+            ),
             cellId,
             cellType: codeModel.type,
             executionCount: codeModel.executionCount,
@@ -933,12 +961,15 @@ function registerRunCellCommand(
             status,
             message:
               status === 'ok'
-                ? `Cell with ID '${cellId}' executed successfully`
+                ? trans.__("Cell with ID '%1' executed successfully", cellId)
                 : status === 'abort'
-                  ? `Cell with ID '${cellId}' execution was aborted`
+                  ? trans.__("Cell with ID '%1' execution was aborted", cellId)
                   : status === 'no-op'
-                    ? `Cell with ID '${cellId}' did not produce an execution request`
-                    : `Cell with ID '${cellId}' execution failed`,
+                    ? trans.__(
+                        "Cell with ID '%1' did not produce an execution request",
+                        cellId
+                      )
+                    : trans.__("Cell with ID '%1' execution failed", cellId),
             cellId,
             cellType: codeModel.type,
             executionCount: codeModel.executionCount,
@@ -957,7 +988,7 @@ function registerRunCellCommand(
           return {
             success: false,
             status: 'error',
-            message: `Cell with ID '${cellId}' execution failed`,
+            message: trans.__("Cell with ID '%1' execution failed", cellId),
             cellId,
             cellType: codeModel.type,
             executionCount: codeModel.executionCount,
@@ -972,7 +1003,10 @@ function registerRunCellCommand(
         return {
           success: true,
           status: 'no-op',
-          message: `Cell with ID '${cellId}' is not a code cell, no execution needed`,
+          message: trans.__(
+            "Cell with ID '%1' is not a code cell, no execution needed",
+            cellId
+          ),
           cellId,
           cellType: cellWidget.model.type,
           executionCount: null,
@@ -992,12 +1026,15 @@ function registerRunCellCommand(
 function registerDeleteCellCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:delete-cell',
-    label: 'Delete Cell',
-    caption: 'Delete a specific cell from the notebook by nbformat cell ID',
+    label: trans.__('Delete Cell'),
+    caption: trans.__(
+      'Delete a specific cell from the notebook by nbformat cell ID'
+    ),
     describedBy: {
       args: {
         type: 'object',
@@ -1047,7 +1084,7 @@ function registerDeleteCellCommand(
 
       return {
         success: true,
-        message: `Cell with ID '${cellId}' deleted successfully`,
+        message: trans.__("Cell with ID '%1' deleted successfully", cellId),
         cellId,
         remainingCells: model.cells.length
       };
@@ -1063,12 +1100,13 @@ function registerDeleteCellCommand(
 function registerSaveNotebookCommand(
   commands: CommandRegistry,
   docManager: IDocumentManager,
+  trans: TranslationBundle,
   notebookTracker?: INotebookTracker
 ): void {
   const command = {
     id: 'jupyterlab-ai-commands:save-notebook',
-    label: 'Save Notebook',
-    caption: 'Save a specific notebook to disk',
+    label: trans.__('Save Notebook'),
+    caption: trans.__('Save a specific notebook to disk'),
     describedBy: {
       args: {
         type: 'object',
@@ -1106,7 +1144,7 @@ function registerSaveNotebookCommand(
 
       return {
         success: true,
-        message: 'Notebook saved successfully',
+        message: trans.__('Notebook saved successfully'),
         notebookName: currentWidget.title.label,
         notebookPath: currentWidget.context.path
       };
@@ -1123,6 +1161,7 @@ export interface IRegisterNotebookCommandsOptions {
   commands: CommandRegistry;
   docManager: IDocumentManager;
   serviceManager: ServiceManager.IManager;
+  trans: TranslationBundle;
   notebookTracker?: INotebookTracker;
 }
 
@@ -1132,17 +1171,20 @@ export interface IRegisterNotebookCommandsOptions {
 export function registerNotebookCommands(
   options: IRegisterNotebookCommandsOptions
 ): void {
-  const { commands, docManager, serviceManager, notebookTracker } = options;
+  const { commands, docManager, serviceManager, notebookTracker, trans } =
+    options;
 
   registerCreateNotebookCommand(
     commands,
     docManager,
-    serviceManager.kernelspecs
+    serviceManager.kernelspecs,
+    trans
   );
-  registerAddCellCommand(commands, docManager, notebookTracker);
+  registerAddCellCommand(commands, docManager, trans, notebookTracker);
   registerGetNotebookInfoCommand(
     commands,
     docManager,
+    trans,
     notebookTracker,
     serviceManager
   );
@@ -1155,11 +1197,12 @@ export function registerNotebookCommands(
   registerGetCellInfoCommand(
     commands,
     docManager,
+    trans,
     notebookTracker,
     serviceManager
   );
-  registerSetCellContentCommand(commands, docManager, notebookTracker);
-  registerRunCellCommand(commands, docManager, notebookTracker);
-  registerDeleteCellCommand(commands, docManager, notebookTracker);
-  registerSaveNotebookCommand(commands, docManager, notebookTracker);
+  registerSetCellContentCommand(commands, docManager, trans, notebookTracker);
+  registerRunCellCommand(commands, docManager, trans, notebookTracker);
+  registerDeleteCellCommand(commands, docManager, trans, notebookTracker);
+  registerSaveNotebookCommand(commands, docManager, trans, notebookTracker);
 }
