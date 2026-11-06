@@ -51,11 +51,26 @@ test.describe('Notebook Commands', () => {
     });
     expect(createResult.success).toBe(true);
 
+    const initialInfo = await executeCommand(page, COMMANDS.getNotebookInfo, {
+      notebookPath
+    });
+    const placeholderCellId = initialInfo.cells[0].cellId;
+
+    await expect(
+      executeCommand(page, COMMANDS.addCell, {
+        content: 'ignored',
+        notebookPath,
+        referenceCellId: 'missing-cell-id'
+      })
+    ).rejects.toThrow("Cell with ID 'missing-cell-id' not found");
+
+    // The empty placeholder cell is replaced, but its ID is kept.
     const markdownCell = await executeCommand(page, COMMANDS.addCell, {
       cellType: 'markdown',
       content: '# Title\nBody',
       notebookPath
     });
+    expect(markdownCell.cellId).toBe(placeholderCellId);
     const codeCell = await executeCommand(page, COMMANDS.addCell, {
       cellType: 'code',
       content: 'value = 41\nvalue + 1',
@@ -418,4 +433,98 @@ test.describe('Opening Notebook widget', () => {
     expect(cellInfo.cellType).toBe('markdown');
     expect(page.activity.getTabLocator(notebookName)).toHaveCount(1);
   });
+});
+
+test.describe('Notebook without stored cell IDs', () => {
+  test.use({ serverFiles: 'only-on-failure' });
+
+  // A kernelspec avoids the kernel selection dialog when the notebook opens.
+  const metadata = {
+    kernelspec: { name: 'python3', display_name: 'Python 3 (ipykernel)' }
+  };
+  const notebooks = {
+    empty: { cells: [], metadata, nbformat: 4, nbformat_minor: 5 },
+    'nbformat 4.4': {
+      cells: [
+        {
+          cell_type: 'code',
+          source: 'x = 1',
+          metadata: {},
+          outputs: [],
+          execution_count: null
+        }
+      ],
+      metadata,
+      nbformat: 4,
+      nbformat_minor: 4
+    }
+  };
+
+  for (const [name, notebook] of Object.entries(notebooks)) {
+    test(`Should keep the same cell IDs across calls (${name})`, async ({
+      page,
+      tmpPath
+    }) => {
+      const notebookPath = `${tmpPath}/no-cell-ids.ipynb`;
+      await page.contents.uploadContent(
+        JSON.stringify(notebook),
+        'text',
+        notebookPath
+      );
+
+      const notebookInfo = await executeCommand(
+        page,
+        COMMANDS.getNotebookInfo,
+        { notebookPath }
+      );
+      const cellId = notebookInfo.cells[0].cellId;
+
+      const cellInfo = await executeCommand(page, COMMANDS.getCellInfo, {
+        notebookPath,
+        cellId
+      });
+      expect(cellInfo.success).toBe(true);
+      expect(cellInfo.cellId).toBe(cellId);
+
+      const setResult = await executeCommand(page, COMMANDS.setCellContent, {
+        notebookPath,
+        cellId,
+        content: 'y = 2',
+        showDiff: false
+      });
+      expect(setResult.success).toBe(true);
+      expect(setResult.cellId).toBe(cellId);
+
+      // Saving stores the cell IDs, so they survive a close and reopen.
+      const saveResult = await executeCommand(page, COMMANDS.saveNotebook, {
+        notebookPath
+      });
+      expect(saveResult.success).toBe(true);
+      const saved = await page.evaluate(async path => {
+        const model = await window.jupyterapp.serviceManager.contents.get(
+          path,
+          { type: 'notebook', content: true }
+        );
+        return model.content;
+      }, notebookPath);
+      expect(saved.nbformat_minor).toBeGreaterThanOrEqual(5);
+      expect(saved.cells[0].id).toBe(cellId);
+
+      // Galata can only close the active notebook. The command above opened it in
+      // the foreground, because executeCommand sends background: false.
+      expect(await page.notebook.close(true)).toBe(true);
+      await expect(
+        page.activity.getTabLocator('no-cell-ids.ipynb')
+      ).toHaveCount(0);
+      const reopenedCellInfo = await executeCommand(
+        page,
+        COMMANDS.getCellInfo,
+        {
+          notebookPath,
+          cellId
+        }
+      );
+      expect(reopenedCellInfo.cellId).toBe(cellId);
+    });
+  }
 });
